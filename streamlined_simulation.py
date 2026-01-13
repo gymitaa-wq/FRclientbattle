@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 from structured_profile_generator import profile_to_prompt_context
 from premium_calculator import InsurancePremiumCalculator
+from product_catalog import get_product_catalog_text
 
 
 def simulate_fr_client_interaction(
@@ -32,6 +33,7 @@ def simulate_fr_client_interaction(
     """
     
     profile_context = profile_to_prompt_context(profile)
+    product_catalog = get_product_catalog_text()
     
     # Calculate realistic premiums
     calculator = InsurancePremiumCalculator(
@@ -44,7 +46,11 @@ def simulate_fr_client_interaction(
     if iteration == 0:
         # Initial proposal
         proposal_prompt = f"""
-You are an experienced insurance advisor meeting with a new client.
+You are an experienced Northwestern Mutual insurance advisor meeting with a new client.
+
+{product_catalog}
+
+IMPORTANT: You MUST recommend products ONLY from the above Northwestern Mutual portfolio. Do not suggest generic products.
 
 {profile_context}
 
@@ -57,25 +63,28 @@ Brief overview of recommendations and total investment.
 
 ## RECOMMENDED PRODUCTS
 
-### 1. Term Life Insurance
-- Coverage amount and term
-- Monthly/annual premium
-- Rationale for this client
+Select 3-6 products from the catalog that best fit THIS CLIENT'S specific situation:
 
-### 2. Whole Life Insurance  
-- Coverage amount
-- Monthly/annual premium
-- Cash value projections (10, 20, 30 years)
-- Rationale
+**For young families (age <40 with children):**
+- Consider: Term Life (10/20), Disability Income, 529 College Savings
 
-### 3. Disability Insurance
-- Monthly benefit amount
-- Monthly premium
-- Coverage details
+**For mid-career professionals (age 40-55):**
+- Consider: Whole Life (65 Life/90 Life), Custom UL, Overhead Expense, Advisory Account
 
-### 4. Additional Recommendations
-- Annuity strategy (if appropriate)
-- Cash buffer allocation
+**For pre-retirees/retirees (age 55+):**
+- Consider: Deferred Income Annuity, Long-Term Care, Accelerated Care Benefit, SPIA
+
+**For high net worth clients (income >$250K or assets >$1M):**
+- Consider: Survivorship Whole Life, Variable UL, Private Client Services, Index Annuity
+
+**For business owners:**
+- Consider: Overhead Expense, Business Disability Buyout, Custom UL for key person
+
+For EACH recommended product, provide:
+- Specific product name from catalog (e.g., "Term 20", "Whole Life Plus", "DIA")
+- Coverage amount or benefit
+- Estimated monthly/annual premium
+- Clear rationale tied to client's profile
 
 ## TOTAL INVESTMENT
 - Monthly: $X,XXX
@@ -86,11 +95,16 @@ Brief overview of recommendations and total investment.
 Why this comprehensive approach vs. DIY solutions.
 
 Use REAL numbers based on client's age ({profile['age']}), income (${profile['annual_income']:,}), and coverage gap (${profile['coverage_gap']:,}).
+IMPORTANT: Vary your recommendations - don't just recommend Term + Whole Life + DI for everyone!
 """
     else:
         # Refinement iteration
         proposal_prompt = f"""
-You are an insurance advisor refining your proposal after client feedback.
+You are a Northwestern Mutual insurance advisor refining your proposal after client feedback.
+
+{product_catalog}
+
+IMPORTANT: You MUST recommend products ONLY from the above Northwestern Mutual portfolio.
 
 {profile_context}
 
@@ -106,7 +120,12 @@ Create a REVISED proposal that addresses these concerns while still providing ad
 
 REFINEMENT STRATEGY:
 1. Acknowledge specific concerns raised
-2. Adjust product mix (remove/reduce flagged products)
+2. Adjust product mix - consider SUBSTITUTING products from the catalog:
+   - If "too expensive" → Try Term instead of Whole Life, or use 90 Life instead of 65 Life
+   - If "don't need permanent coverage" → Focus on Term products + DI + Brokerage
+   - If retirement income concerns → Add DIA or SPIA
+   - If long-term care worries → Add Accelerated Care Benefit or LTC Insurance
+   - If business owner → Consider Overhead Expense or Business Disability Buyout
 3. Improve pricing competitiveness
 4. Increase transparency
 5. Show flexibility
@@ -117,12 +136,12 @@ REVISED PROPOSAL STRUCTURE:
 Brief acknowledgment of feedback.
 
 ## WHAT'S CHANGED
-- Products removed/reduced
+- Products removed/reduced/SUBSTITUTED (name specific products from catalog)
 - Pricing adjustments
-- New features added
+- New products added to address concerns
 
 ## REVISED RECOMMENDATIONS
-[Same structure as initial, but adjusted]
+[List products by specific name from catalog - vary from initial proposal]
 
 ## ADDRESSING YOUR CONCERNS
 Point-by-point response to critiques.

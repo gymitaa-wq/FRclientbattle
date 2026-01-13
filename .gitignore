@@ -73,3 +73,8 @@ htmlcov/
 # Project specific
 caii_artifacts/
 *.pdf
+
+# User Authentication & Secrets (DO NOT COMMIT)
+google_client_secrets.json
+users.json
+simulation_history.csv

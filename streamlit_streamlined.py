@@ -20,6 +20,7 @@ try:
     from structured_profile_generator import generate_structured_client_profile, format_profile_for_display
     from run_streamlined_simulation import run_streamlined_simulation
     from csv_export import save_simulation_to_csv, load_simulation_history, get_history_stats
+    from login_ui import require_login, show_user_header, get_current_username
     import pandas as pd
     ALL_MODULES_LOADED = True
 except ImportError as e:
@@ -63,17 +64,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown('<p class="main-header">🎯 Insurance Simulation - Streamlined Workflow</p>', unsafe_allow_html=True)
-st.markdown("**Profile-Based Simulation with Iteration Summaries & Deal Analysis**")
-
 # Check if modules loaded
 if not ALL_MODULES_LOADED:
     st.error(f"❌ Failed to load modules: {IMPORT_ERROR}")
     st.stop()
 
+# ==============================================================================
+# LOGIN GATE - Require authentication before showing app
+# ==============================================================================
+if not require_login():
+    st.stop()
+
+# ==============================================================================
+# MAIN APP (Shown only after login)
+# ==============================================================================
+
+# Header
+st.markdown('<p class="main-header">🎯 Insurance Simulation - Streamlined Workflow</p>', unsafe_allow_html=True)
+st.markdown("**Profile-Based Simulation with Iteration Summaries & Deal Analysis**")
+
 # Sidebar
 with st.sidebar:
+    # Show logged-in user info
+    show_user_header()
+    
     st.markdown("## ⚙️ Configuration")
     
     # API Key input
@@ -124,10 +138,11 @@ with st.sidebar:
         max_iterations = 0
     
     st.markdown("---")
-    st.markdown("### 📊 Statistics")
+    st.markdown("### 📊 My Statistics")
     
     try:
-        stats = get_history_stats()
+        current_user = get_current_username()
+        stats = get_history_stats(current_user)
         st.metric("Total Simulations", stats['total_simulations'])
         st.metric("Conversion Rate", f"{stats['conversion_rate']:.1f}%")
         st.metric("Avg Friction", f"{stats['avg_friction_score']:.1f}")
@@ -149,12 +164,108 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.markdown("## 🎲 Client Profile Generation")
     
+    # --- Profile Customization Controls ---
+    with st.expander("📝 Profile Customization (Optional - Extreme Ranges)", expanded=False):
+        st.caption("⚙️ Leave fields at default/zero to let AI randomize. Supports extreme cases!")
+        
+        # Reset callback function (must be defined before widgets)
+        def reset_customization():
+            st.session_state.custom_age = 0
+            st.session_state.custom_gender = "Random"
+            st.session_state.custom_marital = "Random"
+            st.session_state.custom_children = 0
+            st.session_state.custom_income = 0
+            st.session_state.custom_401k = -1
+            st.session_state.custom_occupation = "Random"
+            st.session_state.custom_skepticism = 0
+            st.session_state.custom_risk = "Random"
+            st.session_state.custom_smoker = "Random"
+        
+        st.markdown("**👤 Demographics**")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            custom_age = st.number_input("Age (0=Random)", 0, 100, key="custom_age", 
+                                        help="Range: 18-100 for extreme cases")
+        with col2:
+            custom_gender = st.selectbox("Gender", ["Random", "Male", "Female"], key="custom_gender")
+        with col3:
+            custom_marital = st.selectbox("Marital Status", 
+                                         ["Random", "Single", "Married", "Divorced", "Widowed"], 
+                                         key="custom_marital")
+        with col4:
+            custom_children = st.number_input("Children (0=Random)", 0, 10, key="custom_children",
+                                            help="Range: 0-10 for large families")
+        
+        st.markdown("**💼 Employment & Income**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            custom_occupation = st.selectbox("Occupation", 
+                                            ["Random", "Software Engineer", "Doctor", "Lawyer", 
+                                             "Teacher", "Sales Manager", "Business Owner", 
+                                             "Executive", "Entrepreneur", "Retired"], 
+                                            key="custom_occupation")
+        with col2:
+            custom_income = st.number_input("Annual Income ($0=Random)", 0, 10000000, step=10000, 
+                                           key="custom_income",
+                                           help="Range: $0-$10M for extreme wealth cases")
+        with col3:
+            custom_401k = st.number_input("401(k) Balance ($-1=Random)", -1, 5000000, step=10000, 
+                                         key="custom_401k",
+                                         help="Range: $0-$5M, smart calc if income set")
+        
+        st.markdown("**🧠 Psychology & Health**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            custom_skepticism = st.slider("Skepticism (0=Random)", 0, 10, key="custom_skepticism",
+                                         help="0=Random, 1=Very Trusting, 10=Extremely Skeptical")
+        with col2:
+            custom_risk = st.selectbox("Risk Tolerance", 
+                                      ["Random", "Very Conservative", "Conservative", 
+                                       "Moderate", "Aggressive", "Very Aggressive"], 
+                                      key="custom_risk")
+        with col3:
+            custom_smoker = st.selectbox("Smoker?", ["Random", "Yes", "No"], key="custom_smoker")
+        
+        # Reset button with callback
+        st.button("🗑️ Reset All Customizations", on_click=reset_customization, type="secondary")
+    
+    # Build overrides dictionary
+    overrides = {}
+    if custom_age > 0: 
+        overrides['age'] = custom_age
+    if custom_gender != "Random": 
+        overrides['gender'] = custom_gender
+    if custom_marital != "Random": 
+        overrides['marital_status'] = custom_marital
+    if custom_children > 0: 
+        overrides['num_children'] = custom_children
+    if custom_income > 0: 
+        overrides['annual_income'] = custom_income
+    if custom_401k != -1: 
+        overrides['savings_401k'] = custom_401k
+    if custom_occupation != "Random": 
+        overrides['occupation'] = custom_occupation
+    if custom_skepticism > 0: 
+        overrides['skepticism_level'] = custom_skepticism
+    if custom_risk != "Random": 
+        # Map UI values to internal values
+        risk_map = {
+            "Very Conservative": "Conservative",
+            "Conservative": "Conservative",
+            "Moderate": "Moderate",
+            "Aggressive": "Aggressive",
+            "Very Aggressive": "Aggressive"
+        }
+        overrides['risk_tolerance'] = risk_map.get(custom_risk, custom_risk)
+    if custom_smoker != "Random": 
+        overrides['smoker'] = (custom_smoker == "Yes")
+    
     col1, col2, col3 = st.columns([2, 1, 2])
     
     with col2:
         if st.button("🎲 Generate Client Profile", use_container_width=True, type="primary"):
             with st.spinner("Generating client profile..."):
-                profile_dict = generate_structured_client_profile()
+                profile_dict = generate_structured_client_profile(overrides)
                 profile_text = format_profile_for_display(profile_dict)
                 st.session_state['client_profile_dict'] = profile_dict
                 st.session_state['client_profile_text'] = profile_text
@@ -199,9 +310,9 @@ with tab1:
                         
                         st.session_state['simulation_result'] = result
                         
-                        # Save to CSV
+                        # Save to CSV with username
                         try:
-                            save_simulation_to_csv(result)
+                            save_simulation_to_csv(result, get_current_username())
                         except:
                             pass
                         
@@ -451,14 +562,16 @@ with tab3:
 # ============================================================================
 
 with tab4:
-    st.markdown("## 📈 Simulation History")
+    st.markdown("## 📈 My Simulation History")
+    
+    current_user = get_current_username()
     
     try:
-        df = load_simulation_history()
+        df = load_simulation_history(current_user)
         
         if not df.empty:
             # Statistics
-            stats = get_history_stats()
+            stats = get_history_stats(current_user)
             
             col1, col2, col3, col4 = st.columns(4)
             with col1:

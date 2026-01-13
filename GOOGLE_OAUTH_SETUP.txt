@@ -1,0 +1,21 @@
+
+# Google OAuth Configuration Instructions
+
+1. Go to Google Cloud Console: https://console.cloud.google.com/
+2. Create a new project or select existing one
+3. Enable Google+ API:
+   - Go to "APIs & Services" > "Library"
+   - Search for "Google+ API" and enable it
+4. Create OAuth 2.0 credentials:
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Application type: "Web application"
+   - Add authorized redirect URIs:
+     - http://localhost:8501
+     - http://localhost:8501/oauth/callback
+5. Download the credentials JSON file
+6. Replace the contents of google_client_secrets.json with your downloaded credentials
+7. Restart the Streamlit app
+
+IMPORTANT: Keep this file secret and never commit to version control!
+Add google_client_secrets.json to your .gitignore file.

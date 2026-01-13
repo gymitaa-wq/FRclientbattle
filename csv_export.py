@@ -10,12 +10,13 @@ from typing import Dict, Any
 
 CSV_FILE_PATH = "simulation_history.csv"
 
-def save_simulation_to_csv(result: Dict[str, Any]) -> None:
+def save_simulation_to_csv(result: Dict[str, Any], username: str = "anonymous") -> None:
     """
     Saves complete streamlined simulation results to CSV file.
     
     Args:
         result: Streamlined simulation result dictionary
+        username: Username of the logged-in user
     """
     
     # Extract data from result structure
@@ -26,6 +27,9 @@ def save_simulation_to_csv(result: Dict[str, Any]) -> None:
     
     # Build comprehensive row data
     row_data = {
+        # User Info
+        "username": username,
+        
         # Timestamp
         "timestamp": datetime.now().isoformat(),
         
@@ -93,27 +97,39 @@ def save_simulation_to_csv(result: Dict[str, Any]) -> None:
     return CSV_FILE_PATH
 
 
-def load_simulation_history() -> pd.DataFrame:
+def load_simulation_history(username: str = None) -> pd.DataFrame:
     """
     Loads simulation history from CSV file.
+    
+    Args:
+        username: Optional username to filter results. If None, returns all.
     
     Returns:
         DataFrame with simulation history, or empty DataFrame if file doesn't exist
     """
     if os.path.exists(CSV_FILE_PATH):
-        return pd.read_csv(CSV_FILE_PATH)
+        df = pd.read_csv(CSV_FILE_PATH)
+        
+        # Filter by username if provided
+        if username and 'username' in df.columns:
+            df = df[df['username'] == username]
+        
+        return df
     else:
         return pd.DataFrame()
 
 
-def get_history_stats() -> Dict[str, Any]:
+def get_history_stats(username: str = None) -> Dict[str, Any]:
     """
     Calculates statistics from simulation history.
+    
+    Args:
+        username: Optional username to filter stats. If None, returns all.
     
     Returns:
         Dictionary with statistics
     """
-    df = load_simulation_history()
+    df = load_simulation_history(username)
     
     if df.empty:
         return {

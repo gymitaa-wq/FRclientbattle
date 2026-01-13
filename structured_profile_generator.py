@@ -8,26 +8,37 @@ from typing import Dict, Any
 from datetime import datetime
 
 
-def generate_structured_client_profile() -> Dict[str, Any]:
+def generate_structured_client_profile(overrides: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Generates a realistic structured client profile with comprehensive attributes.
+    Accepts overrides to force specific values while randomizing the rest realistically.
+    
+    Args:
+        overrides: Dictionary of values to force (e.g. {'age': 30, 'annual_income': 150000})
     
     Returns:
         Dict with all client attributes
     """
+    if overrides is None:
+        overrides = {}
+    
+    # Helper to get value or default
+    def get_val(key, default_gen_func):
+        if key in overrides and overrides[key] is not None:
+            return overrides[key]
+        return default_gen_func()
     
     # Demographics
-    age = random.randint(28, 58)
-    gender = random.choice(['Male', 'Female'])
-    marital_status = random.choice(['Single', 'Married', 'Married', 'Divorced'])
+    age = get_val('age', lambda: random.randint(28, 58))
+    gender = get_val('gender', lambda: random.choice(['Male', 'Female']))
+    marital_status = get_val('marital_status', lambda: random.choice(['Single', 'Married', 'Married', 'Divorced']))
     
     # Age-appropriate children
-    if age < 30:
-        num_children = random.choice([0, 0, 0, 1])
-    elif age < 40:
-        num_children = random.choice([0, 1, 1, 2, 2])
-    else:
-        num_children = random.choice([0, 1, 2, 2, 3])
+    def gen_children():
+        if age < 30: return random.choice([0, 0, 0, 1])
+        elif age < 40: return random.choice([0, 1, 1, 2, 2])
+        else: return random.choice([0, 1, 2, 2, 3])
+    num_children = get_val('num_children', gen_children)
     
     # Employment & Income - age-correlated
     occupations_by_income = {
@@ -36,20 +47,23 @@ def generate_structured_client_profile() -> Dict[str, Any]:
         'lower': ['Teacher', 'Administrative Assistant', 'Customer Service Manager']
     }
     
-    income_tier = random.choice(['high', 'high', 'medium', 'medium', 'lower'])
-    occupation = random.choice(occupations_by_income[income_tier])
+    # Income - generate random if not overridden
+    def gen_income():
+        tier = random.choice(['high', 'high', 'medium', 'medium', 'lower'])
+        if tier == 'high': base = random.choice([110000, 125000, 150000, 180000])
+        elif tier == 'medium': base = random.choice([65000, 75000, 85000, 95000])
+        else: base = random.choice([45000, 55000, 65000])
+        multiplier = 1.0 + ((age - 30) * 0.015) if age > 30 else 1.0
+        return int(base * multiplier)
     
-    # Income based on age and tier
-    if income_tier == 'high':
-        base_income = random.choice([110000, 125000, 150000, 180000])
-    elif income_tier == 'medium':
-        base_income = random.choice([65000, 75000, 85000, 95000])
-    else:
-        base_income = random.choice([45000, 55000, 65000])
+    annual_income = get_val('annual_income', gen_income)
     
-    # Age adjustment (people earn more as they age)
-    age_multiplier = 1.0 + ((age - 30) * 0.015)  # 1.5% increase per year after 30
-    annual_income = int(base_income * age_multiplier)
+    # Occupation - random or based on income tier
+    def gen_occupation():
+        if annual_income > 100000: return random.choice(occupations_by_income['high'])
+        elif annual_income > 60000: return random.choice(occupations_by_income['medium'])
+        else: return random.choice(occupations_by_income['lower'])
+    occupation = get_val('occupation', gen_occupation)
     
     # Spouse income
     if marital_status == 'Married':
@@ -60,10 +74,12 @@ def generate_structured_client_profile() -> Dict[str, Any]:
     employment_years = min(random.randint(3, 20), age - 22)
     
     # Financial Situation - age and income correlated
-    # 401k grows with age and income
-    years_saving = max(0, age - 25)
-    savings_401k = int(annual_income * 0.06 * years_saving * random.uniform(0.8, 1.5))
-    savings_401k = max(10000, min(savings_401k, 500000))
+    # 401k grows with age and income (smart calculation based on overridden income)
+    def gen_401k():
+        years_saving = max(0, age - 25)
+        val = int(annual_income * 0.06 * years_saving * random.uniform(0.8, 1.5))
+        return max(5000, min(val, 2000000))  # Extended range for extreme cases
+    savings_401k = get_val('savings_401k', gen_401k)
     
     # Emergency fund: 3-6 months expenses
     monthly_expenses = int((annual_income + spouse_income) * 0.6 / 12)
@@ -111,8 +127,8 @@ def generate_structured_client_profile() -> Dict[str, Any]:
     has_disability_insurance = random.choice([True, False, False])
     
     # Psychology & Behavior
-    skepticism_level = random.randint(5, 9)  # Most people are somewhat skeptical
-    risk_tolerance = random.choice(['Conservative', 'Moderate', 'Moderate', 'Aggressive'])
+    skepticism_level = get_val('skepticism_level', lambda: random.randint(5, 9))
+    risk_tolerance = get_val('risk_tolerance', lambda: random.choice(['Conservative', 'Moderate', 'Moderate', 'Aggressive']))
     decision_style = random.choice([
         'Analytical - needs data and research',
         'Emotional - family-focused',
@@ -145,7 +161,7 @@ def generate_structured_client_profile() -> Dict[str, Any]:
     
     # Health
     health_status = random.choice(['Excellent', 'Good', 'Good', 'Fair'])
-    smoker = random.choice([True, False, False, False, False])  # ~20% smokers
+    smoker = get_val('smoker', lambda: random.choice([True, False, False, False, False]))
     health_conditions = random.choice([
         'None', 'None', 'None',
         'Controlled high blood pressure',
