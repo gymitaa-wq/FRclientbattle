@@ -99,7 +99,12 @@ def show_login_page():
         if google_auth.is_configured():
             st.markdown("#### Quick Login")
             if st.button("🔐 Sign in with Google", use_container_width=True, type="secondary"):
-                redirect_uri = "http://localhost:8501"
+                # Detect production vs local environment
+                if 'STREAMLIT_SHARING_MODE' in os.environ:
+                    redirect_uri = "https://frclientbattlev1.streamlit.app/"
+                else:
+                    redirect_uri = "http://localhost:8501"
+                
                 auth_url = google_auth.get_authorization_url(redirect_uri)
                 st.markdown(f'<meta http-equiv="refresh" content="0;url={auth_url}">', unsafe_allow_html=True)
                 st.info("Redirecting to Google...")
