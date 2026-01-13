@@ -1,0 +1,87 @@
+timestamp,decision,friction_score,model_used,num_products,profile_preview,outcome_preview,client_id,age,income,coverage_gap,skepticism,total_iterations,friction_reduction,closure_reasons,rejection_reasons,gender,marital_status,num_children,occupation,annual_income,total_household_income,net_worth,skepticism_level,risk_tolerance,decision_style,financial_literacy,health_status,primary_concern,deal_closed,final_friction_score,initial_friction_score,winning_factors,remaining_concerns,total_monthly_premium,total_annual_premium,products_list,iteration_0_friction,iteration_1_friction,iteration_2_friction,iteration_0_decision,iteration_1_decision,iteration_2_decision
+2026-01-12T11:30:04.359394,REJECT,75.0,gemini,5.0,"## FINANCIAL STANDING
+
+*   **Estimated Annual Income:** $110,000 ($65,000 + $45,000 spouse's income, Email 10).
+*   **Estimated Assets:**
+    *   401k: $8,078 (Email 10)
+    *   Emergency Fund: $24,59...","## DECISION
+**REJECT** (Decline NM Proposal)
+
+## WINNING ARGUMENT
+The AI's clear and direct condemnation of whole life insurance and annuities, coupled with its emphasis on independent research and sh...",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T15:38:11.164663,CONVERT,0.0,gemini,5.0,"## FINANCIAL STANDING
+
+- **Estimated Annual Income:** $195,000 (Client: $110,000 + Spouse: $85,000) (Email 10)
+- **Estimated Assets:** $45,728 ($24,020 in 401k + $21,708 emergency fund) (Email 10)
+- *...","✅ CONVERTED after 1 refinement iteration(s)
+
+## EVALUATION
+
+1. **Did they address the main criticisms?**
+   - **High-cost products removed or justified?** The annuity was removed. The emphasis on whol...",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T16:28:57.661427,CONVERT,0.0,gemini,5.0,"Here is a comprehensive client profile based on the provided email conversation history:
+
+## CLIENT PROFILE:
+
+**Name:** (Not revealed in emails, so unknown)
+**Age:** 46
+
+## FINANCIAL STANDING
+- **Esti...","✅ CONVERTED after 1 refinement iteration(s)
+
+## YOUR DECISION
+
+**ACCEPT**
+
+## REASONING
+
+This revised proposal demonstrates a significant and positive shift from the initial offering. The advisor has ...",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T16:34:50.705114,CONVERT,0.0,gemini,5.0,"Here is a comprehensive client profile based on the provided email history:
+
+## CLIENT PROFILE:
+
+**Client Name:** (Not explicitly stated, but likely using the first name for internal communications)
+
+...","✅ CONVERTED after 1 refinement iteration(s)
+
+## YOUR DECISION
+
+**ACCEPT**
+
+## REASONING
+
+The advisor has made significant and commendable changes in response to the AI's critique and the client's impl...",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T16:42:52.685746,CONVERT,0.0,gemini,5.0,"Here is a detailed client profile based on the provided email history:
+
+## FINANCIAL STANDING
+
+*   **Estimated Annual Income:**
+    *   Client: $150,000 (Email 5, Email 10)
+    *   Spouse: $65,000 (Em...","✅ CONVERTED after 1 refinement iteration(s)
+
+## YOUR DECISION
+
+**ACCEPT**
+
+## REASONING
+
+This revised proposal represents a significant improvement and adequately addresses the client's core concerns,...",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T16:50:30.502369,CONVERT,0.0,gemini,5.0,"Here's a comprehensive client profile based on the email conversation history:
+
+## FINANCIAL STANDING
+
+*   **Estimated Annual Income:** $140,000 ($85,000 Client + $55,000 Spouse - Email 10)
+*   **Esti...","✅ CONVERTED after 1 refinement iteration(s)
+
+## EVALUATION
+
+1. **Did they address the main criticisms?**
+   - **High-cost products removed or justified:** YES. Whole life and annuity were removed.
+   ...",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T18:14:06.219715,REJECT,75.0,,,,,CLIENT_5979,51.0,160000.0,600000.0,7.0,4.0,10.0,,Still too expensive; Commission-driven recommendations,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T19:47:28.103748,CONVERT,40.0,,,,,CLIENT_5598,29.0,150000.0,760000.0,7.0,2.0,45.0,Good value for money,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026-01-12T19:50:57.958928,CONVERT,,,3.0,,,CLIENT_8110,51.0,,1440000.0,,2.0,50.0,See decision text for details,,Female,Divorced,0.0,Marketing Director,180000.0,180000.0,167061.0,5.0,Aggressive,Practical - cost-conscious,Medium,Good,Building retirement savings,True,30.0,80.0,Advisor refined proposal 1 time(s); Significant friction reduction (50 points),,435.0,5220.0,Term Life Insurance; Whole Life Insurance; Disability Insurance,80.0,30.0,0.0,REJECT,ACCEPT,
+2026-01-12T20:01:12.797883,CONVERT,,,2.0,,,CLIENT_7316,29.0,,680000.0,,3.0,50.0,Showed flexibility,,Female,Single,0.0,Consultant,85000.0,85000.0,-179741.0,6.0,Conservative,Emotional - family-focused,Low,Fair,Replacing income if disabled,True,35.0,85.0,Advisor refined proposal 2 time(s); Significant friction reduction (50 points),,240.0,2880.0,Term Life Insurance; Disability Insurance,85.0,80.0,35.0,REJECT,REJECT,ACCEPT
+2026-01-12T20:07:05.280501,CONVERT,,,2.0,,,CLIENT_6863,37.0,,664676.0,,3.0,35.0,Comprehensive coverage,,Female,Divorced,3.0,Consultant,65000.0,65000.0,-270552.0,4.0,Moderate,Analytical - needs data and research,Low,Good,Building retirement savings,True,45.0,80.0,Advisor refined proposal 2 time(s); Significant friction reduction (35 points),,118.0,1416.0,Term Life Insurance; Disability Insurance,80.0,65.0,45.0,REJECT,REJECT,ACCEPT
+2026-01-12T20:14:50.685390,CONVERT,,,3.0,,,CLIENT_4279,29.0,,1418400.0,,3.0,35.0,See decision text for details,,Female,Single,0.0,Software Engineer,177300.0,177300.0,62424.0,7.0,Aggressive,Skeptical - questions everything,High,Fair,Building retirement savings,True,45.0,80.0,Advisor refined proposal 2 time(s); Significant friction reduction (35 points),,145.0,1740.0,Term Life Insurance; Whole Life Insurance; Disability Insurance,80.0,75.0,45.0,REJECT,REJECT,ACCEPT
+2026-01-12T20:23:31.130256,CONVERT,,,2.0,,,CLIENT_5765,43.0,,812600.0,,3.0,55.0,Transparent about fees,,Male,Married,1.0,Accountant,101575.0,166575.0,243710.0,8.0,Aggressive,Skeptical - questions everything,High,Good,Paying off mortgage if something happens,True,30.0,85.0,Advisor refined proposal 2 time(s); Significant friction reduction (55 points),,245.0,2940.0,Term Life Insurance; Disability Insurance,85.0,45.0,30.0,REJECT,REJECT,ACCEPT

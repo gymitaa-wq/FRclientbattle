@@ -1,0 +1,505 @@
+"""
+Streamlit App - Streamlined Simulation Workflow
+Clean standalone version with profile-based simulation
+"""
+
+import streamlit as st
+import sys
+import os
+from datetime import datetime
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# Add current directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Import streamlined simulation components
+try:
+    from structured_profile_generator import generate_structured_client_profile, format_profile_for_display
+    from run_streamlined_simulation import run_streamlined_simulation
+    from csv_export import save_simulation_to_csv, load_simulation_history, get_history_stats
+    import pandas as pd
+    ALL_MODULES_LOADED = True
+except ImportError as e:
+    ALL_MODULES_LOADED = False
+    IMPORT_ERROR = str(e)
+
+# Page config
+st.set_page_config(
+    page_title="Insurance Simulation - Streamlined",
+    page_icon="🎯",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS
+st.markdown("""
+<style>
+    .main-header {font-size: 2.5rem; font-weight: bold; color: #1f77b4;}
+    .sub-header {font-size: 1.5rem; color: #ff7f0e;}
+    .metric-card {background-color: #f0f2f6; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0;}
+    
+    /* Make text in text areas more solid and readable */
+    textarea {
+        color: #000000 !important;
+        font-weight: 500 !important;
+        opacity: 1 !important;
+    }
+    
+    /* Make disabled text areas also readable */
+    textarea:disabled {
+        color: #1a1a1a !important;
+        opacity: 1 !important;
+        -webkit-text-fill-color: #1a1a1a !important;
+    }
+    
+    /* Improve overall text readability */
+    .stTextArea textarea {
+        color: #000000 !important;
+        font-weight: 500 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown('<p class="main-header">🎯 Insurance Simulation - Streamlined Workflow</p>', unsafe_allow_html=True)
+st.markdown("**Profile-Based Simulation with Iteration Summaries & Deal Analysis**")
+
+# Check if modules loaded
+if not ALL_MODULES_LOADED:
+    st.error(f"❌ Failed to load modules: {IMPORT_ERROR}")
+    st.stop()
+
+# Sidebar
+with st.sidebar:
+    st.markdown("## ⚙️ Configuration")
+    
+    # API Key input
+    st.markdown("### 🔑 API Key")
+    gemini_api_key = st.text_input(
+        "Gemini API Key (optional)",
+        type="password",
+        help="Enter your Gemini API key. If left empty, will use key from .env file",
+        placeholder="AIza..."
+    )
+    
+    # Set API key in environment if provided
+    if gemini_api_key:
+        import os
+        os.environ['GOOGLE_API_KEY'] = gemini_api_key
+        st.success("✅ Using custom API key")
+    else:
+        st.info("ℹ️ Using API key from .env")
+    
+    st.markdown("---")
+    
+    # Model selection
+    st.markdown("### 🤖 AI Model")
+    model_option = st.selectbox(
+        "Select Model",
+        ["gemini", "claude", "gpt"],
+        index=0,
+        help="AI model for simulation"
+    )
+    
+    # Refinement settings
+    st.markdown("### 🔄 Refinement Settings")
+    enable_refinement = st.checkbox(
+        "Enable Iterative Refinement",
+        value=True,
+        help="FR refines proposal if rejected"
+    )
+    
+    if enable_refinement:
+        max_iterations = st.slider(
+            "Max Iterations",
+            min_value=1,
+            max_value=5,
+            value=3,
+            help="Maximum refinement attempts"
+        )
+    else:
+        max_iterations = 0
+    
+    st.markdown("---")
+    st.markdown("### 📊 Statistics")
+    
+    try:
+        stats = get_history_stats()
+        st.metric("Total Simulations", stats['total_simulations'])
+        st.metric("Conversion Rate", f"{stats['conversion_rate']:.1f}%")
+        st.metric("Avg Friction", f"{stats['avg_friction_score']:.1f}")
+    except:
+        st.info("No history yet")
+
+# Main tabs
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🎲 Generate & Run",
+    "📊 Results",
+    "📄 Details",
+    "📈 History"
+])
+
+# ============================================================================
+# TAB 1: GENERATE & RUN
+# ============================================================================
+
+with tab1:
+    st.markdown("## 🎲 Client Profile Generation")
+    
+    col1, col2, col3 = st.columns([2, 1, 2])
+    
+    with col2:
+        if st.button("🎲 Generate Client Profile", use_container_width=True, type="primary"):
+            with st.spinner("Generating client profile..."):
+                profile_dict = generate_structured_client_profile()
+                profile_text = format_profile_for_display(profile_dict)
+                st.session_state['client_profile_dict'] = profile_dict
+                st.session_state['client_profile_text'] = profile_text
+                st.success("✅ Client profile generated!")
+                st.rerun()
+    
+    # Display profile if generated
+    if 'client_profile_text' in st.session_state:
+        st.markdown("### 👤 Generated Client Profile")
+        st.text_area(
+            "Profile Details",
+            value=st.session_state['client_profile_text'],
+            height=500,
+            key=f"profile_{st.session_state['client_profile_dict']['profile_id']}"
+        )
+        
+        # Quick stats
+        profile = st.session_state['client_profile_dict']
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Age", f"{profile['age']} years")
+        with col2:
+            st.metric("Income", f"${profile['total_household_income']:,}")
+        with col3:
+            st.metric("Coverage Gap", f"${profile['coverage_gap']:,}")
+        with col4:
+            st.metric("Skepticism", f"{profile['skepticism_level']}/10")
+        
+        st.markdown("---")
+        
+        # Run simulation button
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("🚀 Run Simulation", use_container_width=True, type="primary"):
+                with st.spinner("Running simulation... (this may take 2-3 minutes)"):
+                    try:
+                        result = run_streamlined_simulation(
+                            profile=st.session_state['client_profile_dict'],
+                            max_iterations=max_iterations,
+                            enable_refinement=enable_refinement
+                        )
+                        
+                        st.session_state['simulation_result'] = result
+                        
+                        # Save to CSV
+                        try:
+                            save_simulation_to_csv(result)
+                        except:
+                            pass
+                        
+                        st.success("✅ Simulation complete!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Simulation failed: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    else:
+        st.info("👆 Click 'Generate Client Profile' to start")
+    
+    # ============================================================================
+    # DISPLAY RESULTS ON SAME PAGE (for demos)
+    # ============================================================================
+    
+    if 'simulation_result' in st.session_state:
+        st.markdown("---")
+        st.markdown("## 📊 Simulation Results")
+        
+        result = st.session_state['simulation_result']
+        analysis = result['outcome_analysis']
+        
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            status = "✅ CLOSED" if result['deal_closed'] else "❌ NOT CLOSED"
+            st.metric("Deal Status", status)
+        
+        with col2:
+            st.metric("Total Iterations", result['total_iterations'])
+        
+        with col3:
+            st.metric("Final Friction", f"{result['final_friction_score']:.1f}/100")
+        
+        with col4:
+            if analysis.get('friction_reduction', 0) > 0:
+                st.metric("Friction Reduction", f"{analysis['friction_reduction']:.1f} pts")
+        
+        st.markdown("---")
+        
+        # Iteration summaries
+        st.markdown("### 🔄 Iteration Summary")
+        
+        for iter_data in result['iterations']:
+            iteration = iter_data['iteration']
+            accepted = iter_data['accepted']
+            friction = iter_data['friction_score']
+            status_emoji = "✅" if accepted else "❌"
+            
+            with st.expander(f"Iteration {iteration} {status_emoji} - Friction: {friction:.1f}/100", expanded=(iteration==result['total_iterations']-1)):
+                col1, col2 = st.columns([1, 1])
+                
+                with col1:
+                    st.markdown("**FR Proposal (Summary):**")
+                    st.text_area(
+                        f"Proposal {iteration}",
+                        value=iter_data['proposal'][:500] + "..." if len(iter_data['proposal']) > 500 else iter_data['proposal'],
+                        height=150,
+                        disabled=True,
+                        key=f"main_proposal_{iteration}"
+                    )
+                
+                with col2:
+                    st.markdown("**Client Decision:**")
+                    st.text_area(
+                        f"Decision {iteration}",
+                        value=iter_data['decision_text'][:500] + "..." if len(iter_data['decision_text']) > 500 else iter_data['decision_text'],
+                        height=150,
+                        disabled=True,
+                        key=f"main_decision_{iteration}"
+                    )
+        
+        st.markdown("---")
+        
+        # Deal outcome
+        if result['deal_closed']:
+            st.markdown("### 🎉 Deal Closed!")
+            
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.markdown("**Closure Reasons:**")
+                for reason in analysis.get('closure_reasons', []):
+                    st.markdown(f"- ✅ {reason}")
+                
+                if analysis.get('winning_factors'):
+                    st.markdown("**Winning Factors:**")
+                    for factor in analysis['winning_factors']:
+                        st.markdown(f"- 🏆 {factor}")
+            
+            with col2:
+                st.markdown("**💼 Final Products:**")
+                products = result['final_products']
+                if products.get('products'):
+                    for product in products['products']:
+                        st.markdown(f"• **{product['name']}**: ${product['monthly_premium']}/month")
+                    
+                    st.markdown(f"**Total**: ${products['total_monthly']:,}/month (${products['total_annual']:,}/year)")
+                else:
+                    st.info("See Details tab for full product information")
+        
+        else:
+            st.markdown("### ❌ Deal Not Closed")
+            
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.markdown("**Rejection Reasons:**")
+                for reason in analysis.get('rejection_reasons', []):
+                    st.markdown(f"- ❌ {reason}")
+            
+            with col2:
+                if analysis.get('remaining_concerns'):
+                    st.markdown("**Remaining Concerns:**")
+                    for concern in analysis['remaining_concerns'][:3]:
+                        st.markdown(f"- ⚠️ {concern}")
+
+# ============================================================================
+# TAB 2: RESULTS
+# ============================================================================
+
+with tab2:
+    if 'simulation_result' in st.session_state:
+        result = st.session_state['simulation_result']
+        analysis = result['outcome_analysis']
+        
+        st.markdown("## 📊 Simulation Results")
+        
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            status = "✅ CLOSED" if result['deal_closed'] else "❌ NOT CLOSED"
+            st.metric("Deal Status", status)
+        
+        with col2:
+            st.metric("Total Iterations", result['total_iterations'])
+        
+        with col3:
+            st.metric("Final Friction", f"{result['final_friction_score']:.1f}/100")
+        
+        with col4:
+            if analysis.get('friction_reduction', 0) > 0:
+                st.metric("Friction Reduction", f"{analysis['friction_reduction']:.1f} pts")
+        
+        st.markdown("---")
+        
+        # Deal outcome analysis
+        if result['deal_closed']:
+            st.markdown("### 🎉 Deal Closed!")
+            
+            st.markdown("**Closure Reasons:**")
+            for reason in analysis.get('closure_reasons', []):
+                st.markdown(f"- ✅ {reason}")
+            
+            if analysis.get('winning_factors'):
+                st.markdown("**Winning Factors:**")
+                for factor in analysis['winning_factors']:
+                    st.markdown(f"- 🏆 {factor}")
+            
+            # Final products
+            st.markdown("---")
+            st.markdown("### 💼 Final Products")
+            
+            products = result['final_products']
+            if products.get('products'):
+                for product in products['products']:
+                    st.markdown(f"**{product['name']}**: ${product['monthly_premium']}/month")
+                
+                st.markdown(f"**Total Monthly**: ${products['total_monthly']:,}")
+                st.markdown(f"**Total Annual**: ${products['total_annual']:,}")
+            else:
+                st.info("See proposal text for product details")
+        
+        else:
+            st.markdown("### ❌ Deal Not Closed")
+            
+            st.markdown("**Rejection Reasons:**")
+            for reason in analysis.get('rejection_reasons', []):
+                st.markdown(f"- ❌ {reason}")
+            
+            if analysis.get('remaining_concerns'):
+                st.markdown("**Remaining Concerns:**")
+                for concern in analysis['remaining_concerns'][:3]:
+                    st.markdown(f"- ⚠️ {concern}")
+    
+    else:
+        st.info("No simulation results yet. Run a simulation in Tab 1.")
+
+# ============================================================================
+# TAB 3: DETAILS
+# ============================================================================
+
+with tab3:
+    if 'simulation_result' in st.session_state:
+        result = st.session_state['simulation_result']
+        
+        st.markdown("## 📄 Iteration Details")
+        
+        # Show each iteration
+        for iter_data in result['iterations']:
+            iteration = iter_data['iteration']
+            accepted = iter_data['accepted']
+            friction = iter_data['friction_score']
+            
+            status_emoji = "✅" if accepted else "❌"
+            
+            with st.expander(f"Iteration {iteration} {status_emoji} - Friction: {friction:.1f}/100", expanded=(iteration==0)):
+                st.markdown(f"**Status**: {'ACCEPTED' if accepted else 'REJECTED'}")
+                st.markdown(f"**Friction Score**: {friction:.1f}/100")
+                
+                st.markdown("---")
+                st.markdown("**FR Proposal:**")
+                st.text_area(
+                    f"Proposal {iteration}",
+                    value=iter_data['proposal'],
+                    height=300,
+                    disabled=True,
+                    key=f"proposal_{iteration}"
+                )
+                
+                st.markdown("**AI Critique:**")
+                st.text_area(
+                    f"Critique {iteration}",
+                    value=iter_data['ai_critique'],
+                    height=200,
+                    disabled=True,
+                    key=f"critique_{iteration}"
+                )
+                
+                st.markdown("**Client Decision:**")
+                st.text_area(
+                    f"Decision {iteration}",
+                    value=iter_data['decision_text'],
+                    height=200,
+                    disabled=True,
+                    key=f"decision_{iteration}"
+                )
+    else:
+        st.info("No simulation details yet. Run a simulation in Tab 1.")
+
+# ============================================================================
+# TAB 4: HISTORY
+# ============================================================================
+
+with tab4:
+    st.markdown("## 📈 Simulation History")
+    
+    try:
+        df = load_simulation_history()
+        
+        if not df.empty:
+            # Statistics
+            stats = get_history_stats()
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Simulations", stats['total_simulations'])
+            with col2:
+                st.metric("Conversion Rate", f"{stats['conversion_rate']:.1f}%")
+            with col3:
+                st.metric("Avg Friction", f"{stats['avg_friction_score']:.1f}")
+            with col4:
+                if 'latest_timestamp' in stats:
+                    st.metric("Latest Run", stats['latest_timestamp'][:10])
+            
+            st.markdown("---")
+            
+            # Data table
+            st.dataframe(df, use_container_width=True, height=400)
+            
+            # Download button
+            csv = df.to_csv(index=False)
+            st.download_button(
+                "📥 Download History CSV",
+                csv,
+                "simulation_history.csv",
+                "text/csv",
+                use_container_width=True
+            )
+            
+            # Clear history
+            if st.button("🗑️ Clear History", type="secondary"):
+                import os
+                if os.path.exists("simulation_history.csv"):
+                    os.remove("simulation_history.csv")
+                    st.success("History cleared!")
+                    st.rerun()
+        else:
+            st.info("📭 No simulation history yet. Run some simulations to see data here.")
+    
+    except Exception as e:
+        st.error(f"Error loading history: {e}")
+
+# Footer
+st.markdown("---")
+st.markdown("**Project CAII** - Multi-Agent Insurance Simulation | Streamlined Workflow")
+
