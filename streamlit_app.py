@@ -410,8 +410,6 @@ with tab1:
             
             # Run the simulation
             with st.spinner("Processing..."):
-                # Use enhanced simulation if refinement enabled
-                if REFINEMENT_AVAILABLE and enable_refinement:
                 # Use streamlined simulation if profile generated
                 if "client_profile_dict" in st.session_state and STREAMLINED_AVAILABLE:
                     result = run_streamlined_simulation(
@@ -420,7 +418,8 @@ with tab1:
                         enable_refinement=enable_refinement
                     )
                 # Use enhanced simulation if refinement enabled
-                el                    result = run_simulation_enhanced(
+                elif REFINEMENT_AVAILABLE and enable_refinement:
+                    result = run_simulation_enhanced(
                         email_history,
                         model=model_option,
                         enable_refinement=True,
