@@ -331,11 +331,12 @@ with tab1:
                         
                         st.session_state['simulation_result'] = result
                         
-                        # Save to CSV with username
+                        # Save to DB with username
                         try:
-                            save_simulation_to_csv(result, get_current_username())
-                        except:
-                            pass
+                            save_simulation(result, get_current_username())
+                            st.toast("Simulation saved to history", icon="💾")
+                        except Exception as e:
+                            print(f"Error saving manual sim: {e}")
                         
                         st.success("✅ Simulation complete!")
                         st.rerun()
