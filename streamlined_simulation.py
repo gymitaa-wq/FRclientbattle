@@ -13,6 +13,8 @@ from product_catalog import get_product_catalog_text
 
 def simulate_fr_client_interaction(
     profile: Dict[str, Any],
+    iteration: int,
+    previous_proposal: str = None,
     previous_critique: str = None,
     callModel: callable = None,
     model_name: str = "gemini",
