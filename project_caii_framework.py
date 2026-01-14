@@ -141,22 +141,47 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             client = genai.Client(api_key=api_key)
             
             # Determine specific model
+            # Prefer 2.0 Flash for speed/cost, falling back to 1.5 Flash if needed
             if "gemini 3" in model.lower():
                 target_model = 'gemini-2.0-flash-exp'
+            elif "2.5" in model.lower():
+                 target_model = 'gemini-2.0-flash-exp' # 2.5 not public yet, fallback to 2.0
             elif model.lower() == "gemini":
+                # Default to 2.0 Flash Exp for best performance/cost balance
                 target_model = 'gemini-2.0-flash-exp'
             else:
                 target_model = model
             
-            response = client.models.generate_content(
-                model=target_model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=0.7
-                )
-            )
-            return response.text
+            # Retry logic for rate limits (429)
+            import time
+            max_retries = 3
+            base_delay = 2
+            
+            for attempt in range(max_retries):
+                try:
+                    response = client.models.generate_content(
+                        model=target_model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            max_output_tokens=max_tokens,
+                            temperature=0.7
+                        )
+                    )
+                    return response.text
+                except Exception as e:
+                    error_str = str(e)
+                    if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                        if attempt < max_retries - 1:
+                            wait_time = base_delay * (2 ** attempt)
+                            print(f"Rate limit hit (429). Retrying in {wait_time}s...")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            print(f"Max retries reached for 429 error.")
+                            raise
+                    else:
+                        raise e
+                        
         except Exception as e:
             print(f"Gemini error: {e}")
             raise

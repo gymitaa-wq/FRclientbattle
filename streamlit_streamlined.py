@@ -673,7 +673,11 @@ with tab5:
         total_friction = 0
         
         try:
+            import time
             for i in range(batch_size):
+                if i > 0:
+                    time.sleep(5) # Rate limit buffer
+                    
                 sim_num = i + 1
                 
                 # Define callback for live updates
