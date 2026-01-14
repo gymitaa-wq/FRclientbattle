@@ -11,6 +11,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import pathlib
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (if present)
+load_dotenv()
 
 # Allow OAuth over HTTP for local development
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
