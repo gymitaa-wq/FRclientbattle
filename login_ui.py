@@ -3,6 +3,7 @@ Login UI Component for Streamlit App
 Provides authentication interface and session management
 """
 
+import os
 import streamlit as st
 from user_auth import user_manager
 from google_oauth import google_auth
