@@ -140,47 +140,81 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Use new google.genai API
             client = genai.Client(api_key=api_key)
             
-            # Determine specific model
-            # Prefer 2.0 Flash for speed/cost, falling back to 1.5 Flash if needed
-            if "gemini 3" in model.lower():
-                target_model = 'gemini-2.0-flash-exp'
-            elif "2.5" in model.lower():
-                 target_model = 'gemini-2.0-flash-exp' # 2.5 not public yet, fallback to 2.0
-            elif model.lower() == "gemini":
-                # Default to 2.0 Flash Exp for best performance/cost balance
-                target_model = 'gemini-2.0-flash-exp'
-            else:
-                target_model = model
+            # Define fallback hierarchy (prioritize speed/cost, then capacity)
+            model_hierarchy = [
+                'gemini-2.0-flash-exp',  # Latest, fast
+                'gemini-1.5-flash',      # Stable, fast, high quota
+                'gemini-1.5-pro',        # High intelligence, stricter quota
+                'gemini-1.5-flash-8b'    # Lowest latency, high throughput
+            ]
             
-            # Retry logic for rate limits (429)
-            import time
-            max_retries = 3
-            base_delay = 2
+            # Determine starting model based on input
+            start_model = 'gemini-2.0-flash-exp'
+            if "gemini 3" in model.lower() or "2.5" in model.lower():
+                start_model = 'gemini-2.0-flash-exp'
+            elif "1.5 flash" in model.lower():
+                start_model = 'gemini-1.5-flash'
+            elif "1.5 pro" in model.lower():
+                start_model = 'gemini-1.5-pro'
+            elif model.lower() != "gemini":
+                 # If user asked for something specific that's not generic 'gemini', try that first
+                if model in model_hierarchy:
+                     start_model = model
+                else:
+                     # Add custom model to start of list
+                     model_hierarchy.insert(0, model)
+                     start_model = model
             
-            for attempt in range(max_retries):
+            # Reorder hierarchy to start with requested model
+            if start_model in model_hierarchy:
+                # Move start_model to front, keep others as fallbacks
+                model_hierarchy.remove(start_model)
+                model_hierarchy.insert(0, start_model)
+            
+            # Attempt generation with fallbacks
+            last_error = None
+            
+            for current_model in model_hierarchy:
                 try:
-                    response = client.models.generate_content(
-                        model=target_model,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            max_output_tokens=max_tokens,
-                            temperature=0.7
-                        )
-                    )
-                    return response.text
+                    # Retry logic for rate limits (429) on the SAME model before switching
+                    # Short retry for transient hiccups
+                    import time
+                    retries_per_model = 2
+                    for attempt in range(retries_per_model + 1):
+                        try:
+                            response = client.models.generate_content(
+                                model=current_model,
+                                contents=prompt,
+                                config=types.GenerateContentConfig(
+                                    max_output_tokens=max_tokens,
+                                    temperature=0.7
+                                )
+                            )
+                            return response.text
+                        except Exception as e:
+                            error_str = str(e)
+                            if ("429" in error_str or "RESOURCE_EXHAUSTED" in error_str) and attempt < retries_per_model:
+                                time.sleep(2 * (attempt + 1)) # 2s, 4s wait
+                                continue
+                            raise e # Re-raise to trigger model switch
+
                 except Exception as e:
                     error_str = str(e)
+                    last_error = e
                     if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                        if attempt < max_retries - 1:
-                            wait_time = base_delay * (2 ** attempt)
-                            print(f"Rate limit hit (429). Retrying in {wait_time}s...")
-                            time.sleep(wait_time)
-                            continue
-                        else:
-                            print(f"Max retries reached for 429 error.")
-                            raise
+                        print(f"⚠️ Quota exceeded on {current_model}. Switching to next available model...")
+                        continue # Try next model in hierarchy
                     else:
-                        raise e
+                        print(f"Gemini error on {current_model}: {e}")
+                        raise e # Non-quota errors should fail immediately
+            
+            # If we get here, all models failed
+            print("❌ All Gemini models exhausted quotas.")
+            raise last_error
+
+        except Exception as e:
+            print(f"Gemini error: {e}")
+            raise
                         
         except Exception as e:
             print(f"Gemini error: {e}")
