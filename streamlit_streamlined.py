@@ -721,7 +721,9 @@ with tab5:
                     progress_bar.progress(sim_num / batch_size)
                     
                     # Save to CSV immediately
-                    save_simulation_to_csv(result, current_user)
+                    file_path = save_simulation_to_csv(result, current_user)
+                    st.toast(f"Saved Sim #{sim_num} for user '{current_user}'", icon="💾")
+                    print(f"DEBUG: Saved batch run {sim_num} to {file_path} for user {current_user}")
                     
                 except Exception as e:
                     st.error(f"Error in Simulation {sim_num}: {e}")

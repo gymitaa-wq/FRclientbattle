@@ -8,7 +8,9 @@ import os
 from datetime import datetime
 from typing import Dict, Any
 
-CSV_FILE_PATH = "simulation_history.csv"
+# Use absolute path to ensure consistency
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_FILE_PATH = os.path.join(BASE_DIR, "simulation_history.csv")
 
 def save_simulation_to_csv(result: Dict[str, Any], username: str = "anonymous") -> None:
     """
