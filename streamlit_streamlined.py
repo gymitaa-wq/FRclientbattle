@@ -15,11 +15,18 @@ load_dotenv()
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Ensure DB is initialized
+try:
+    from database import init_db
+    init_db()
+except Exception as e:
+    print(f"DB Init Error: {e}")
+
 # Import streamlined simulation components
 try:
     from structured_profile_generator import generate_structured_client_profile, format_profile_for_display
     from run_streamlined_simulation import run_streamlined_simulation
-    from csv_export import save_simulation_to_csv, load_simulation_history, get_history_stats
+    from database import save_simulation, load_history_df as load_simulation_history, get_stats as get_history_stats
     from login_ui import require_login, show_user_header, get_current_username
     import pandas as pd
     ALL_MODULES_LOADED = True
@@ -720,10 +727,10 @@ with tab5:
                     # Update progress
                     progress_bar.progress(sim_num / batch_size)
                     
-                    # Save to CSV immediately
-                    file_path = save_simulation_to_csv(result, current_user)
+                    # Save to DB immediately
+                    file_path = save_simulation(result, current_user)
                     st.toast(f"Saved Sim #{sim_num} for user '{current_user}'", icon="💾")
-                    print(f"DEBUG: Saved batch run {sim_num} to {file_path} for user {current_user}")
+                    print(f"DEBUG: Saved batch run {sim_num} to DB for user {current_user}")
                     
                 except Exception as e:
                     st.error(f"Error in Simulation {sim_num}: {e}")
