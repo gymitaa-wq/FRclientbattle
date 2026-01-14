@@ -141,7 +141,16 @@ def __init__(self):
 
 ## Troubleshooting
 
-**Error: "redirect_uri_mismatch"**
+### 🔴 Error 403: "Access Denied" (Google Screen)
+**Cause:** App is in **Testing Mode** and you are not a Test User.
+**Fix:**
+1. Go to **[Google OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent)**.
+2. Scroll to "Test users" -> **+ ADD USERS**.
+3. Add your email (`gymitaa@gmail.com`).
+4. **Save**.
+*(Alternative: Click **PUBLISH APP** to execute a permanent fix).*
+
+### Error: "redirect_uri_mismatch"
 - Add exact URL to Google Console authorized URIs
 - Include both with/without trailing slash
 

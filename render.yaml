@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: frclientbattle
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run streamlit_streamlined.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: STREAMLIT_SHARING_MODE
+        value: production
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        fromExp: https://frclientbattle.onrender.com
+    autoDeploy: false

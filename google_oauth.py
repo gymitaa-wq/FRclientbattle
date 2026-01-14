@@ -33,18 +33,21 @@ class GoogleAuthManager:
         return os.path.join(script_dir, 'google_client_secrets.json')
     
     def is_configured(self) -> bool:
-        """Check if Google OAuth is properly configured (via file or secrets)"""
-        # Check Streamlit Secrets (Production)
+        """Check if Google OAuth is properly configured (via env var, secrets, or file)"""
+        # 1. Check Environment Variables (Render/Docker)
+        if os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"):
+            return True
+
+        # 2. Check Streamlit Secrets (Streamlit Cloud)
         try:
             if "google_oauth" in st.secrets:
                 secrets = st.secrets["google_oauth"]
                 if "client_id" in secrets and "client_secret" in secrets:
                     return True
         except (FileNotFoundError, AttributeError, KeyError):
-            # No secrets file found locally, proceed to file check
             pass
                 
-        # Check Local File (Development)
+        # 3. Check Local File (Development)
         if os.path.exists(self.client_secrets_file):
             try:
                 with open(self.client_secrets_file, 'r') as f:
@@ -73,7 +76,24 @@ class GoogleAuthManager:
     
     def create_flow(self, redirect_uri: str) -> Flow:
         """Create OAuth flow from secrets or file"""
-        # Try Secrets first
+        # 1. Try Environment Variables (Render)
+        if os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"):
+            client_config = {
+                "web": {
+                    "client_id": os.environ["GOOGLE_CLIENT_ID"],
+                    "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [redirect_uri]
+                }
+            }
+            return Flow.from_client_config(
+                client_config,
+                scopes=self.scopes,
+                redirect_uri=redirect_uri
+            )
+
+        # 2. Try Secrets (Streamlit Cloud)
         try:
             if "google_oauth" in st.secrets:
                 secrets = st.secrets["google_oauth"]
@@ -95,7 +115,7 @@ class GoogleAuthManager:
         except (FileNotFoundError, AttributeError, KeyError):
             pass
             
-        # Fallback to file
+        # 3. Fallback to file
         return Flow.from_client_secrets_file(
             self.client_secrets_file,
             scopes=self.scopes,

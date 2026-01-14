@@ -21,7 +21,9 @@ def handle_google_callback(query_params):
         state = query_params.get('state', '')
         
         # Determine redirect_uri based on environment
-        if 'STREAMLIT_SHARING_MODE' in os.environ:
+        if 'GOOGLE_OAUTH_REDIRECT_URI' in os.environ:
+            redirect_uri = os.environ['GOOGLE_OAUTH_REDIRECT_URI']
+        elif 'STREAMLIT_SHARING_MODE' in os.environ:
             redirect_uri = "https://frclientbattle-deva-test.streamlit.app/"
         else:
             redirect_uri = "http://localhost:8501"
@@ -107,10 +109,14 @@ def show_login_page():
             st.markdown("#### Quick Login")
             if st.button("🔐 Sign in with Google", use_container_width=True, type="secondary"):
                 # Detect production vs local environment
-                if 'STREAMLIT_SHARING_MODE' in os.environ:
-                    # Production URL
+                if 'GOOGLE_OAUTH_REDIRECT_URI' in os.environ:
+                    # Generic Production (Render / Custom)
+                    redirect_uri = os.environ['GOOGLE_OAUTH_REDIRECT_URI']
+                elif 'STREAMLIT_SHARING_MODE' in os.environ:
+                    # Streamlit Cloud
                     redirect_uri = "https://frclientbattle-deva-test.streamlit.app/"
                 else:
+                    # Localhost
                     redirect_uri = "http://localhost:8501"
                 
                 auth_url = google_auth.get_authorization_url(redirect_uri)
