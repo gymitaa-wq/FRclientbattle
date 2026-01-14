@@ -131,7 +131,7 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Fall through to direct API calls
     
     # Direct API calls
-    if model.lower() in ["gemini", "google"] and GOOGLE_AVAILABLE:
+    if (model.lower() == "gemini" or "gemini" in model.lower()) and GOOGLE_AVAILABLE:
         try:
             api_key = os.getenv("GOOGLE_API_KEY")
             if not api_key:
@@ -140,8 +140,11 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Use new google.genai API
             client = genai.Client(api_key=api_key)
             
+            # Determine specific model
+            target_model = 'gemini-2.0-flash-exp' if model.lower() == "gemini" else model
+            
             response = client.models.generate_content(
-                model='gemini-2.0-flash-exp',
+                model=target_model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     max_output_tokens=max_tokens,
@@ -372,9 +375,14 @@ Brief overview of the client's situation and your recommended strategy.
 ## DISABILITY INSURANCE (DI)
 - Recommended coverage amount (typically 60-70% of income)
 - Benefit period and elimination period
-- Own-occupation vs. any-occupation
+- True Own-Occupation definition (highlight specifically)
 - Cost-of-living adjustments
-- Why this is critical for income protection
+- Why this is critical for income protection ("Your ability to earn is your biggest asset")
+
+## CRITICAL ILLNESS & LONG-TERM CARE (LTC)
+- Critical Care: Lump sum benefit for heart attack, cancer, stroke
+- Long-Term Care: Planning for future care needs (Accelerated Care Benefit or standalone)
+- Why adding these riders/policies now locks in insurability
 
 ## RETIREMENT & ANNUITY STRATEGY
 - Recommended annuity type (fixed, variable, indexed)

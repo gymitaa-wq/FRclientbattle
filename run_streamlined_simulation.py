@@ -4,6 +4,10 @@ Runs complete simulation from profile to final results
 """
 
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from structured_profile_generator import generate_structured_client_profile, format_profile_for_display
 from streamlined_simulation import (
     simulate_fr_client_interaction,
@@ -17,7 +21,8 @@ from project_caii_framework import callModel
 def run_streamlined_simulation(
     profile: Dict[str, Any] = None,
     max_iterations: int = 3,
-    enable_refinement: bool = True
+    enable_refinement: bool = True,
+    model_name: str = "gemini"
 ) -> Dict[str, Any]:
     """
     Runs complete streamlined simulation from profile.
@@ -57,7 +62,8 @@ def run_streamlined_simulation(
     iteration_result = simulate_fr_client_interaction(
         profile=profile,
         iteration=iteration,
-        callModel=callModel
+        callModel=callModel,
+        model_name=model_name
     )
     
     all_iterations.append(iteration_result)
@@ -88,7 +94,8 @@ def run_streamlined_simulation(
                 iteration=iteration,
                 previous_proposal=previous_iteration['proposal'],
                 previous_critique=previous_iteration['ai_critique'],
-                callModel=callModel
+                callModel=callModel,
+                model_name=model_name
             )
             
             all_iterations.append(iteration_result)

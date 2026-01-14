@@ -16,7 +16,8 @@ def simulate_fr_client_interaction(
     iteration: int,
     previous_proposal: str = None,
     previous_critique: str = None,
-    callModel: callable = None
+    callModel: callable = None,
+    model_name: str = "gemini"
 ) -> Dict[str, Any]:
     """
     Simulates FR-client interaction for one iteration.
@@ -153,7 +154,7 @@ Point-by-point response to critiques.
 Use REAL numbers. Show meaningful improvement from iteration {iteration-1}.
 """
     
-    proposal = callModel(proposal_prompt, model="gemini", max_tokens=3000)
+    proposal = callModel(proposal_prompt, model=model_name, max_tokens=3000)
     
     # Client consults AI for critique
     critique_prompt = f"""
@@ -208,7 +209,7 @@ Accept, Reject, or Negotiate
 Be objective but consider the client's skepticism level ({profile['skepticism_level']}/10).
 """
     
-    ai_critique = callModel(critique_prompt, model="gemini", max_tokens=2000)
+    ai_critique = callModel(critique_prompt, model=model_name, max_tokens=2000)
     
     # Client makes decision
     decision_prompt = f"""
@@ -250,7 +251,7 @@ Be realistic:
 - Good value + addresses concerns = likely accept
 """
     
-    decision_text = callModel(decision_prompt, model="gemini", max_tokens=1500)
+    decision_text = callModel(decision_prompt, model=model_name, max_tokens=1500)
     
     # Parse decision
     # Parse decision - look for explicit DECISION: ACCEPT or DECISION: REJECT

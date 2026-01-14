@@ -125,9 +125,9 @@ with st.sidebar:
     st.markdown("### 🤖 AI Model")
     model_option = st.selectbox(
         "Select Model",
-        ["gemini", "claude", "gpt"],
+        ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash", "claude", "gpt"],
         index=0,
-        help="AI model for simulation"
+        help="AI model for simulation. 'gemini-2.0-flash-exp' is the latest experimental model."
     )
     
     # Refinement settings
@@ -317,7 +317,8 @@ with tab1:
                         result = run_streamlined_simulation(
                             profile=st.session_state['client_profile_dict'],
                             max_iterations=max_iterations,
-                            enable_refinement=enable_refinement
+                            enable_refinement=enable_refinement,
+                            model_name=model_option
                         )
                         
                         st.session_state['simulation_result'] = result
