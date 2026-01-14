@@ -35,10 +35,14 @@ class GoogleAuthManager:
     def is_configured(self) -> bool:
         """Check if Google OAuth is properly configured (via file or secrets)"""
         # Check Streamlit Secrets (Production)
-        if "google_oauth" in st.secrets:
-            secrets = st.secrets["google_oauth"]
-            if "client_id" in secrets and "client_secret" in secrets:
-                return True
+        try:
+            if "google_oauth" in st.secrets:
+                secrets = st.secrets["google_oauth"]
+                if "client_id" in secrets and "client_secret" in secrets:
+                    return True
+        except (FileNotFoundError, AttributeError, KeyError):
+            # No secrets file found locally, proceed to file check
+            pass
                 
         # Check Local File (Development)
         if os.path.exists(self.client_secrets_file):
@@ -70,23 +74,26 @@ class GoogleAuthManager:
     def create_flow(self, redirect_uri: str) -> Flow:
         """Create OAuth flow from secrets or file"""
         # Try Secrets first
-        if "google_oauth" in st.secrets:
-            secrets = st.secrets["google_oauth"]
-            # Construct config dictionary expected by Flow.from_client_config
-            client_config = {
-                "web": {
-                    "client_id": secrets["client_id"],
-                    "client_secret": secrets["client_secret"],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [redirect_uri]
+        try:
+            if "google_oauth" in st.secrets:
+                secrets = st.secrets["google_oauth"]
+                # Construct config dictionary expected by Flow.from_client_config
+                client_config = {
+                    "web": {
+                        "client_id": secrets["client_id"],
+                        "client_secret": secrets["client_secret"],
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [redirect_uri]
+                    }
                 }
-            }
-            return Flow.from_client_config(
-                client_config,
-                scopes=self.scopes,
-                redirect_uri=redirect_uri
-            )
+                return Flow.from_client_config(
+                    client_config,
+                    scopes=self.scopes,
+                    redirect_uri=redirect_uri
+                )
+        except (FileNotFoundError, AttributeError, KeyError):
+            pass
             
         # Fallback to file
         return Flow.from_client_secrets_file(
