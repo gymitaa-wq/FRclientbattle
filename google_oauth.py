@@ -33,39 +33,67 @@ class GoogleAuthManager:
         return os.path.join(script_dir, 'google_client_secrets.json')
     
     def is_configured(self) -> bool:
-        """Check if Google OAuth is properly configured with real credentials"""
-        if not os.path.exists(self.client_secrets_file):
-            return False
-        
-        try:
-            with open(self.client_secrets_file, 'r') as f:
-                config = json.load(f)
-            
-            # Check if it's still the template (has placeholder values)
-            client_id = config.get('web', {}).get('client_id', '')
-            client_secret = config.get('web', {}).get('client_secret', '')
-            
-            # If contains placeholder text, not configured
-            if 'YOUR_CLIENT_ID' in client_id or 'YOUR_CLIENT_SECRET' in client_secret:
+        """Check if Google OAuth is properly configured (via file or secrets)"""
+        # Check Streamlit Secrets (Production)
+        if "google_oauth" in st.secrets:
+            secrets = st.secrets["google_oauth"]
+            if "client_id" in secrets and "client_secret" in secrets:
+                return True
+                
+        # Check Local File (Development)
+        if os.path.exists(self.client_secrets_file):
+            try:
+                with open(self.client_secrets_file, 'r') as f:
+                    config = json.load(f)
+                
+                # Check for 'web' or 'installed'
+                client_config = config.get('web') or config.get('installed')
+                if not client_config:
+                    return False
+
+                client_id = client_config.get('client_id', '')
+                client_secret = client_config.get('client_secret', '')
+                
+                if 'YOUR_CLIENT_ID' in client_id or 'YOUR_CLIENT_SECRET' in client_secret:
+                    return False
+                
+                if not client_id or not client_secret:
+                    return False
+                
+                return True
+                
+            except:
                 return False
-            
-            # If empty, not configured
-            if not client_id or not client_secret:
-                return False
-            
-            return True
-            
-        except:
-            return False
+                
+        return False
     
     def create_flow(self, redirect_uri: str) -> Flow:
-        """Create OAuth flow"""
-        flow = Flow.from_client_secrets_file(
+        """Create OAuth flow from secrets or file"""
+        # Try Secrets first
+        if "google_oauth" in st.secrets:
+            secrets = st.secrets["google_oauth"]
+            # Construct config dictionary expected by Flow.from_client_config
+            client_config = {
+                "web": {
+                    "client_id": secrets["client_id"],
+                    "client_secret": secrets["client_secret"],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [redirect_uri]
+                }
+            }
+            return Flow.from_client_config(
+                client_config,
+                scopes=self.scopes,
+                redirect_uri=redirect_uri
+            )
+            
+        # Fallback to file
+        return Flow.from_client_secrets_file(
             self.client_secrets_file,
             scopes=self.scopes,
             redirect_uri=redirect_uri
         )
-        return flow
     
     def get_authorization_url(self, redirect_uri: str) -> str:
         """
