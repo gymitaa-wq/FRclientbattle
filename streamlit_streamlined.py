@@ -729,6 +729,9 @@ with tab5:
                     traceback.print_exc()
             
             st.success(f"✅ Batch simulation complete! {batch_size} runs completed.")
+            import time
+            time.sleep(2)
+            st.rerun()
             
         except Exception as e:
             st.error(f"Batch execution failed: {e}")
