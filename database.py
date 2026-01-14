@@ -35,7 +35,13 @@ class SimulationResult(Base):
     final_friction_score = Column(Float)
     total_iterations = Column(Integer)
     
-    # Products (Summary)
+    # Detail fields
+    rejection_reasons = Column(Text)
+    winning_factors = Column(Text)
+    net_worth = Column(Float)
+    marital_status = Column(String(50))
+
+    # Product fields
     total_monthly_premium = Column(Float)
     product_names = Column(String(500))
     
@@ -85,10 +91,15 @@ def save_simulation(result: Dict[str, Any], username: str = "anonymous") -> int:
     try:
         profile = result.get('profile', {})
         final_products = result.get('final_products', {})
+        outcome_analysis = result.get('outcome_analysis', {})
         
         # Extract product names
         p_names = [p['name'] for p in final_products.get('products', [])]
         p_names_str = "; ".join(p_names)
+        
+        # Extract reasons
+        rejection_str = "; ".join(outcome_analysis.get('rejection_reasons', []))
+        winning_str = "; ".join(outcome_analysis.get('winning_factors', []))
         
         # Create record
         db_record = SimulationResult(
@@ -101,11 +112,15 @@ def save_simulation(result: Dict[str, Any], username: str = "anonymous") -> int:
             annual_income=profile.get('annual_income', 0.0),
             total_household_income=profile.get('total_household_income', 0.0),
             occupation=profile.get('occupation', 'unknown'),
+            net_worth=profile.get('net_worth', 0.0),
+            marital_status=profile.get('marital_status', 'unknown'),
             
             # Outcome fields
             deal_closed=result.get('deal_closed', False),
             final_friction_score=result.get('final_friction_score', 0.0),
             total_iterations=result.get('total_iterations', 0),
+            rejection_reasons=rejection_str,
+            winning_factors=winning_str,
             
             # Product fields
             total_monthly_premium=final_products.get('total_monthly', 0.0),
@@ -155,10 +170,14 @@ def load_history_df(username: Optional[str] = None):
                 "age": r.age,
                 "occupation": r.occupation,
                 "total_household_income": r.total_household_income,
+                "net_worth": r.net_worth,
+                "marital_status": r.marital_status,
                 "deal_closed": r.deal_closed,
                 "decision": "CONVERT" if r.deal_closed else "REJECT",
                 "final_friction_score": r.final_friction_score,
                 "total_iterations": r.total_iterations,
+                "rejection_reasons": r.rejection_reasons,
+                "winning_factors": r.winning_factors,
                 "product_names": r.product_names,
                 "total_monthly_premium": r.total_monthly_premium
             }
