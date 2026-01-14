@@ -19,7 +19,13 @@ def handle_google_callback(query_params):
         
         # Build full callback URL
         state = query_params.get('state', '')
-        redirect_uri = "http://localhost:8501"
+        
+        # Determine redirect_uri based on environment
+        if 'STREAMLIT_SHARING_MODE' in os.environ:
+            redirect_uri = "https://frclientbattle-deva-test.streamlit.app/"
+        else:
+            redirect_uri = "http://localhost:8501"
+            
         authorization_response = f"{redirect_uri}?code={auth_code}&state={state}"
         
         # Get user info
@@ -102,7 +108,8 @@ def show_login_page():
             if st.button("🔐 Sign in with Google", use_container_width=True, type="secondary"):
                 # Detect production vs local environment
                 if 'STREAMLIT_SHARING_MODE' in os.environ:
-                    redirect_uri = "https://frclientbattlev1.streamlit.app/"
+                    # Production URL
+                    redirect_uri = "https://frclientbattle-deva-test.streamlit.app/"
                 else:
                     redirect_uri = "http://localhost:8501"
                 
