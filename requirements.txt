@@ -10,3 +10,8 @@ google-auth-httplib2>=0.2.0
 google-api-python-client>=2.0.0
 trycourier>=4.5.0
 typing-extensions>=4.12.0
+
+# AI/Agent Framework
+langgraph>=0.0.10
+langchain>=0.1.0
+langchain-google-genai>=0.0.9
