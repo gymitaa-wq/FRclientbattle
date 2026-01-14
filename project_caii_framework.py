@@ -143,8 +143,7 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Define fallback hierarchy (prioritize speed/cost, then capacity)
             model_hierarchy = [
                 'gemini-2.0-flash-exp',  # Latest, fast
-                'gemini-1.5-flash',      # Stable, fast, high quota
-                'gemini-1.5-pro',        # High intelligence, stricter quota
+                'gemini-1.5-pro',        # High intelligence, stricter quota,
                 'gemini-1.5-flash-8b'    # Lowest latency, high throughput
             ]
             
