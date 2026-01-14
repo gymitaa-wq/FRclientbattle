@@ -162,11 +162,12 @@ with st.sidebar:
         st.info("No history yet")
 
 # Main tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🎲 Generate & Run",
     "📊 Results",
     "📄 Details",
-    "📈 History"
+    "📈 History",
+    "🤖 Batch Mode"
 ])
 
 # ============================================================================
@@ -622,8 +623,116 @@ with tab4:
         else:
             st.info("📭 No simulation history yet. Run some simulations to see data here.")
     
-    except Exception as e:
         st.error(f"Error loading history: {e}")
+except Exception as e:
+    # Fallback to prevent app crash if History tab fails
+    pass
+
+# ============================================================================
+# TAB 5: BATCH MODE
+# ============================================================================
+
+with tab5:
+    st.markdown("## 🤖 Automatic Batch Simulator")
+    st.markdown("Run continuous simulations to generate dataset and test robustness.")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        batch_size = st.number_input("Number of Simulations", min_value=1, max_value=50, value=10)
+        
+        start_batch = st.button("🚀 Start Automatic Batch", type="primary", use_container_width=True)
+        
+        st.info(f"Each simulation takes approx 1-3 minutes using **{model_option}**.")
+    
+    if start_batch:
+        # Containers for live updates
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Data storage
+        batch_results = []
+        batch_df_placeholder = st.empty()
+        
+        # Stop button logic (place holder)
+        stop_placeholder = st.empty()
+        
+        current_user = get_current_username()
+        
+        stats_col1, stats_col2, stats_col3 = st.columns(3)
+        wins = 0
+        total_friction = 0
+        
+        try:
+            for i in range(batch_size):
+                sim_num = i + 1
+                
+                # Define callback for live updates
+                def batch_status_callback(msg):
+                    status_text.markdown(f"**Sim {sim_num}/{batch_size}:** {msg}")
+                
+                try:
+                    # Run simulation
+                    result = run_streamlined_simulation(
+                        profile=None, # Random profile
+                        max_iterations=max_iterations,
+                        enable_refinement=enable_refinement,
+                        model_name=model_option,
+                        status_callback=batch_status_callback
+                    )
+                    
+                    # Process result
+                    is_closed = result['deal_closed']
+                    friction = result['final_friction_score']
+                    profile = result['profile']
+                    
+                    if is_closed:
+                        wins += 1
+                    total_friction += friction
+                    
+                    # Add to list
+                    row = {
+                        "Sim #": sim_num,
+                        "Client ID": profile['profile_id'],
+                        "Age": profile['age'],
+                        "Income": f"${profile['total_household_income']:,}",
+                        "Deal Closed": "✅ YES" if is_closed else "❌ NO",
+                        "Friction": f"{friction:.1f}",
+                        "Iterations": result['total_iterations']
+                    }
+                    batch_results.append(row)
+                    
+                    # Update table
+                    df = pd.DataFrame(batch_results)
+                    batch_df_placeholder.dataframe(df, use_container_width=True)
+                    
+                    # Update stats
+                    with stats_col1:
+                        st.metric("Completed", f"{sim_num}/{batch_size}")
+                    with stats_col2:
+                        win_rate = (wins / sim_num) * 100
+                        st.metric("Win Rate", f"{win_rate:.1f}%")
+                    with stats_col3:
+                        avg_fric = total_friction / sim_num
+                        st.metric("Avg Friction", f"{avg_fric:.1f}")
+                    
+                    # Update progress
+                    progress_bar.progress(sim_num / batch_size)
+                    
+                    # Save to CSV immediately
+                    save_simulation_to_csv(result, current_user)
+                    
+                except Exception as e:
+                    st.error(f"Error in Simulation {sim_num}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            st.success(f"✅ Batch simulation complete! {batch_size} runs completed.")
+            
+        except Exception as e:
+            st.error(f"Batch execution failed: {e}")
+
+
 
 # Footer
 st.markdown("---")

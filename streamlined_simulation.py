@@ -13,11 +13,10 @@ from product_catalog import get_product_catalog_text
 
 def simulate_fr_client_interaction(
     profile: Dict[str, Any],
-    iteration: int,
-    previous_proposal: str = None,
     previous_critique: str = None,
     callModel: callable = None,
-    model_name: str = "gemini"
+    model_name: str = "gemini",
+    status_callback: callable = None
 ) -> Dict[str, Any]:
     """
     Simulates FR-client interaction for one iteration.
@@ -44,6 +43,9 @@ def simulate_fr_client_interaction(
     )
     
     # Generate FR proposal
+    if status_callback:
+        status_callback(f"Generating proposal (Iteration {iteration})...")
+        
     if iteration == 0:
         # Initial proposal
         proposal_prompt = f"""
@@ -157,6 +159,9 @@ Use REAL numbers. Show meaningful improvement from iteration {iteration-1}.
     proposal = callModel(proposal_prompt, model=model_name, max_tokens=3000)
     
     # Client consults AI for critique
+    if status_callback:
+        status_callback(f"Getting AI critique (Iteration {iteration})...")
+        
     critique_prompt = f"""
 You are a public AI (like ChatGPT) that a client is consulting about an insurance proposal.
 
@@ -212,6 +217,9 @@ Be objective but consider the client's skepticism level ({profile['skepticism_le
     ai_critique = callModel(critique_prompt, model=model_name, max_tokens=2000)
     
     # Client makes decision
+    if status_callback:
+        status_callback(f"Client making decision (Iteration {iteration})...")
+        
     decision_prompt = f"""
 You are simulating the client's decision-making process.
 

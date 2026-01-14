@@ -22,7 +22,8 @@ def run_streamlined_simulation(
     profile: Dict[str, Any] = None,
     max_iterations: int = 3,
     enable_refinement: bool = True,
-    model_name: str = "gemini"
+    model_name: str = "gemini",
+    status_callback: callable = None
 ) -> Dict[str, Any]:
     """
     Runs complete streamlined simulation from profile.
@@ -38,6 +39,9 @@ def run_streamlined_simulation(
     
     # Generate profile if not provided
     if profile is None:
+        if status_callback:
+            status_callback("Generating structured client profile...")
+            
         print("\n" + "="*70)
         print("GENERATING CLIENT PROFILE")
         print("="*70)
@@ -63,7 +67,8 @@ def run_streamlined_simulation(
         profile=profile,
         iteration=iteration,
         callModel=callModel,
-        model_name=model_name
+        model_name=model_name,
+        status_callback=status_callback
     )
     
     all_iterations.append(iteration_result)
@@ -95,7 +100,8 @@ def run_streamlined_simulation(
                 previous_proposal=previous_iteration['proposal'],
                 previous_critique=previous_iteration['ai_critique'],
                 callModel=callModel,
-                model_name=model_name
+                model_name=model_name,
+                status_callback=status_callback
             )
             
             all_iterations.append(iteration_result)
@@ -113,6 +119,9 @@ def run_streamlined_simulation(
             previous_iteration = iteration_result
     
     # Analyze outcome
+    if status_callback:
+        status_callback("Analyzing final deal outcome...")
+        
     print("\n" + "="*70)
     print("ANALYZING DEAL OUTCOME")
     print("="*70)
