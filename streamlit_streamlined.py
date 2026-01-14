@@ -623,10 +623,11 @@ with tab4:
         else:
             st.info("📭 No simulation history yet. Run some simulations to see data here.")
     
-        st.error(f"Error loading history: {e}")
+        
 except Exception as e:
     # Fallback to prevent app crash if History tab fails
-    pass
+        st.error(f"Error loading history: {e}")    
+pass
 
 # ============================================================================
 # TAB 5: BATCH MODE
