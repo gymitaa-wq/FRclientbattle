@@ -10,5 +10,5 @@ services:
       - key: STREAMLIT_SHARING_MODE
         value: production
       - key: GOOGLE_OAUTH_REDIRECT_URI
-        fromExp: https://frclientbattle.onrender.com
+        value: https://frclientbattle.onrender.com
     autoDeploy: false
