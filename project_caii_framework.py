@@ -141,7 +141,12 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             client = genai.Client(api_key=api_key)
             
             # Determine specific model
-            target_model = 'gemini-2.0-flash-exp' if model.lower() == "gemini" else model
+            if "gemini 3" in model.lower():
+                target_model = 'gemini-2.0-flash-exp'
+            elif model.lower() == "gemini":
+                target_model = 'gemini-2.0-flash-exp'
+            else:
+                target_model = model
             
             response = client.models.generate_content(
                 model=target_model,

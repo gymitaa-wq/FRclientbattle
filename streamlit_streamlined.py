@@ -125,9 +125,9 @@ with st.sidebar:
     st.markdown("### 🤖 AI Model")
     model_option = st.selectbox(
         "Select Model",
-        ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash", "claude", "gpt"],
+        ["Gemini 3 (Latest Public Default)", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash", "claude", "gpt"],
         index=0,
-        help="AI model for simulation. 'gemini-2.0-flash-exp' is the latest experimental model."
+        help="AI model for simulation. 'Gemini 3' uses the latest experimental model (2.0 Flash) to match public AI."
     )
     
     # Refinement settings
