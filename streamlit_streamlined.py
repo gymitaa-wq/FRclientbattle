@@ -88,6 +88,18 @@ with st.sidebar:
     # Show logged-in user info
     show_user_header()
     
+    # Debug Info (Temporary)
+    with st.expander("🛠️ Debug Env Vars (Render)", expanded=False):
+        st.write("Checking Environment Keys:")
+        env_keys = list(os.environ.keys())
+        st.write(f"- GOOGLE_CLIENT_ID present: {'GOOGLE_CLIENT_ID' in os.environ}")
+        if 'GOOGLE_CLIENT_ID' in os.environ:
+             st.code(os.environ['GOOGLE_CLIENT_ID'][:10] + "...")
+             
+        st.write(f"- GOOGLE_CLIENT_SECRET present: {'GOOGLE_CLIENT_SECRET' in os.environ}")
+        st.write(f"- STREAMLIT_SHARING_MODE: {os.environ.get('STREAMLIT_SHARING_MODE', 'Not Set')}")
+        st.write(f"- GOOGLE_OAUTH_REDIRECT_URI: {os.environ.get('GOOGLE_OAUTH_REDIRECT_URI', 'Not Set')}")
+    
     st.markdown("## ⚙️ Configuration")
     
     # API Key input
