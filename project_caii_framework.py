@@ -143,7 +143,6 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Define fallback hierarchy (prioritize speed/cost, then capacity)
             model_hierarchy = [
                 'gemini-2.0-flash-exp',  # Latest, fast
-                'gemini-1.5-pro',        # High intelligence, stricter quota,
                 'gemini-1.5-flash-8b'    # Lowest latency, high throughput
             ]
             
@@ -151,10 +150,14 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             start_model = 'gemini-2.0-flash-exp'
             if "gemini 3" in model.lower() or "2.5" in model.lower():
                 start_model = 'gemini-2.0-flash-exp'
+            elif "8b" in model.lower():
+                start_model = 'gemini-1.5-flash-8b'
             elif "1.5 flash" in model.lower():
-                start_model = 'gemini-1.5-flash'
+                 # 1.5-flash is having API issues, upgrade to 2.0
+                start_model = 'gemini-2.0-flash-exp'
             elif "1.5 pro" in model.lower():
-                start_model = 'gemini-1.5-pro'
+                 # 1.5-pro is having API issues, upgrade to 2.0
+                start_model = 'gemini-2.0-flash-exp'
             elif model.lower() != "gemini":
                  # If user asked for something specific that's not generic 'gemini', try that first
                 if model in model_hierarchy:
