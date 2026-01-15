@@ -342,7 +342,14 @@ with tab1:
                         st.rerun()
                         
                     except Exception as e:
-                        st.error(f"❌ Simulation failed: {e}")
+                        error_msg = str(e)
+                        if "Rate Limit" in error_msg:
+                            st.error(f"🛑 {error_msg}")
+                            st.warning("👉 Look at the sidebar on the left to enter your key!")
+                            # In a single simulation context, we don't break a loop, but stop further processing.
+                            # For a batch, 'break' would stop the loop. Here, we just show the error.
+                        else:
+                            st.error(f"❌ Simulation failed: {e}")
                         import traceback
                         st.code(traceback.format_exc())
     else:

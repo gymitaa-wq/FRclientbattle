@@ -212,10 +212,26 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             
             # If we get here, all models failed
             print("❌ All Gemini models exhausted quotas.")
-            raise last_error
+            
+            # Raise a user-friendly error that Streamlit can display
+            quota_error_msg = (
+                "🚨 Rate Limit Reached for Shared Quota: "
+                "Please enter your own Google Gemini API Key in the sidebar to continue. "
+                "Get one for free at aistudio.google.com/app/apikey"
+            )
+            # Re-raise as a ValueError with the friendly message so it propagates clearly
+            raise ValueError(quota_error_msg)
 
         except Exception as e:
+            error_str = str(e)
+            if "Rate Limit Reached" in error_str:
+                raise e # Propagate our friendly error
             print(f"Gemini error: {e}")
+            # If it's a raw 429 that escaped, wrap it
+            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                 raise ValueError(
+                    "🚨 Rate Limit Reached: Please enter your own Google Gemini API Key in the sidebar."
+                )
             raise
                         
         except Exception as e:
