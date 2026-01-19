@@ -11,4 +11,10 @@ services:
         value: production
       - key: GOOGLE_OAUTH_REDIRECT_URI
         value: https://frclientbattle.onrender.com
+      - key: DATABASE_URL
+        value: sqlite:////data/simulation_data.db
+    disk:
+      name: frclientbattle-disk
+      mountPath: /data
+      sizeGB: 1
     autoDeploy: false
