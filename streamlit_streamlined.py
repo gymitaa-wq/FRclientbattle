@@ -595,6 +595,9 @@ with tab4:
     
     current_user = get_current_username()
     
+    # Import new helper
+    from database import get_simulation_details
+
     try:
         df = load_simulation_history(current_user)
         
@@ -615,9 +618,50 @@ with tab4:
             
             st.markdown("---")
             
-            # Data table
-            st.dataframe(df, use_container_width=True, height=400)
+            # Interactive Data table
+            st.markdown("### 📋 Click a row to see full conversation details")
             
+            event = st.dataframe(
+                df,
+                use_container_width=True,
+                height=400,
+                on_select="rerun",
+                selection_mode="single-row"
+            )
+            
+            # Show details if row selected
+            if len(event.selection.rows) > 0:
+                selected_index = event.selection.rows[0]
+                row_data = df.iloc[selected_index]
+                sim_id = int(row_data['id'])
+                
+                details = get_simulation_details(sim_id)
+                
+                if details:
+                    st.markdown("---")
+                    st.markdown(f"## 💬 Full Conversation History (Sim ID: {sim_id})")
+                    
+                    iterations = details['iterations_data']
+                    if iterations:
+                        for i, iter_data in enumerate(iterations):
+                            iter_num = iter_data.get('iteration', i)
+                            with st.expander(f"🔄 Iteration {iter_num} - {iter_data.get('decision_text', '').splitlines()[0][:50]}...", expanded=True):
+                                col_a, col_b = st.columns(2)
+                                
+                                with col_a:
+                                    st.markdown("#### 🧑‍💼 Advisor Proposal")
+                                    st.info(iter_data.get('proposal', 'No proposal data'))
+                                
+                                with col_b:
+                                    st.markdown("#### 🤖 AI Critique")
+                                    st.warning(iter_data.get('ai_critique', 'No critique data'))
+                                
+                                st.markdown("#### 🧑 Client Decision")
+                                decision_color = "green" if iter_data.get('accepted') else "red"
+                                st.markdown(f":{decision_color}[{iter_data.get('decision_text', 'No decision data')}]")
+                    else:
+                        st.warning("No detailed iteration data available for this simulation (legacy record).")
+                
             # Download button
             csv = df.to_csv(index=False)
             st.download_button(
@@ -638,11 +682,11 @@ with tab4:
         else:
             st.info("📭 No simulation history yet. Run some simulations to see data here.")
     
-        
     except Exception as e:
         # Fallback to prevent app crash if History tab fails
         st.error(f"Error loading history: {e}")
-        pass
+        import traceback
+        st.code(traceback.format_exc())
 
 # ============================================================================
 # TAB 5: BATCH MODE

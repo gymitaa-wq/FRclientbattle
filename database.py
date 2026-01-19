@@ -187,6 +187,23 @@ def load_history_df(username: Optional[str] = None):
     finally:
         db.close()
 
+def get_simulation_details(sim_id: int):
+    """Fetch full details for a single simulation"""
+    db = SessionLocal()
+    try:
+        result = db.query(SimulationResult).filter(SimulationResult.id == sim_id).first()
+        if result:
+             return {
+                 "id": result.id,
+                 "iterations_data": result.iterations_data,
+                 "profile_data": result.profile_data,
+                 "outcome_analysis": result.outcome_analysis_data,
+                 "final_products": result.final_products_data
+             }
+        return None
+    finally:
+        db.close()
+
 def get_stats(username: Optional[str] = None) -> Dict[str, Any]:
     """Get aggregated statistics"""
     db = SessionLocal()
