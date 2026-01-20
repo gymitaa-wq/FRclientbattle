@@ -200,6 +200,11 @@ with tab1:
             st.session_state.custom_skepticism = 0
             st.session_state.custom_risk = "Random"
             st.session_state.custom_smoker = "Random"
+            # New fields
+            st.session_state.custom_savings_total = -1
+            st.session_state.custom_debt_total = -1
+            st.session_state.custom_net_worth = 0 
+            st.session_state.custom_health_status = "Random"
         
         st.markdown("**👤 Demographics**")
         col1, col2, col3, col4 = st.columns(4)
@@ -222,28 +227,47 @@ with tab1:
             custom_occupation = st.selectbox("Occupation", 
                                             ["Random", "Software Engineer", "Doctor", "Lawyer", 
                                              "Teacher", "Sales Manager", "Business Owner", 
-                                             "Executive", "Entrepreneur", "Retired"], 
+                                             "Executive", "Entrepreneur", "Retired", "Unemployed"], 
                                             key="custom_occupation")
         with col2:
             custom_income = st.number_input("Annual Income ($0=Random)", 0, 10000000, step=10000, 
                                            key="custom_income",
                                            help="Range: $0-$10M for extreme wealth cases")
         with col3:
-            custom_401k = st.number_input("401(k) Balance ($-1=Random)", -1, 5000000, step=10000, 
-                                         key="custom_401k",
-                                         help="Range: $0-$5M, smart calc if income set")
-        
-        st.markdown("**🧠 Psychology & Health**")
+            custom_net_worth = st.number_input("Net Worth ($0=Random, can be neg)", -5000000, 50000000, step=50000,
+                                              key="custom_net_worth", value=0,
+                                              help="Total Assets - Total Liabilities. Can be negative!")
+
+        # Financial Details Row
         col1, col2, col3 = st.columns(3)
         with col1:
-            custom_skepticism = st.slider("Skepticism (0=Random)", 0, 10, key="custom_skepticism",
-                                         help="0=Random, 1=Very Trusting, 10=Extremely Skeptical")
+             custom_401k = st.number_input("401(k) Balance ($-1=Random)", -1, 5000000, step=10000, 
+                                         key="custom_401k",
+                                         help="Range: $0-$5M")
+        with col2:
+            custom_savings_total = st.number_input("Total Liquid Savings ($-1=Random)", -1, 10000000, step=10000,
+                                                  key="custom_savings_total",
+                                                  help="Cash + Emergency Fund + Brokerage")
+        with col3:
+            custom_debt_total = st.number_input("Total Debt ($-1=Random)", -1, 10000000, step=10000,
+                                               key="custom_debt_total",
+                                               help="Includes Mortgage, Student Loans, etc.")
+        
+        st.markdown("**🧠 Psychology & Health**")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            custom_skepticism = st.slider("Skepticism", 0, 10, key="custom_skepticism",
+                                         help="0=Random, 1=Trusting, 10=Hostile")
         with col2:
             custom_risk = st.selectbox("Risk Tolerance", 
                                       ["Random", "Very Conservative", "Conservative", 
                                        "Moderate", "Aggressive", "Very Aggressive"], 
                                       key="custom_risk")
         with col3:
+            custom_health_status = st.selectbox("Health", 
+                                               ["Random", "Excellent", "Good", "Fair", "Poor", "Terminal"], 
+                                               key="custom_health_status")
+        with col4:
             custom_smoker = st.selectbox("Smoker?", ["Random", "Yes", "No"], key="custom_smoker")
         
         # Reset button with callback
@@ -279,6 +303,15 @@ with tab1:
         overrides['risk_tolerance'] = risk_map.get(custom_risk, custom_risk)
     if custom_smoker != "Random": 
         overrides['smoker'] = (custom_smoker == "Yes")
+    # New Mappings
+    if custom_net_worth != 0:
+        overrides['net_worth'] = custom_net_worth
+    if custom_savings_total != -1:
+        overrides['total_assets'] = custom_savings_total # We override total assets directly
+    if custom_debt_total != -1:
+         overrides['total_debt'] = custom_debt_total
+    if custom_health_status != "Random":
+        overrides['health_status'] = custom_health_status
     
     col1, col2, col3 = st.columns([2, 1, 2])
     

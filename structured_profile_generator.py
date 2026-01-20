@@ -169,10 +169,57 @@ def generate_structured_client_profile(overrides: Dict[str, Any] = None) -> Dict
         'Asthma'
     ])
     
-    # Calculate derived values
-    total_debt = mortgage_balance + student_loans + car_loans + credit_card_debt
-    total_assets = savings_401k + emergency_fund + other_investments
-    net_worth = total_assets - total_debt
+    # Calculate derived values with overrides support
+    
+    # 1. Total Debt Override
+    if 'total_debt' in overrides:
+        total_debt = overrides['total_debt']
+        # Distribute debt roughly if not specified otherwise
+        if total_debt == 0:
+            mortgage_balance = 0
+            student_loans = 0
+            car_loans = 0
+            credit_card_debt = 0
+            monthly_mortgage = 0
+        elif 'mortgage_balance' not in overrides:
+            # Assume mostly mortgage if unknown
+            mortgage_balance = int(total_debt * 0.8)
+            monthly_mortgage = int(mortgage_balance * 0.006)
+            student_loans = int(total_debt * 0.1)
+            car_loans = int(total_debt * 0.05)
+            credit_card_debt = total_debt - mortgage_balance - student_loans - car_loans
+    else:
+        total_debt = mortgage_balance + student_loans + car_loans + credit_card_debt
+
+    # 2. Total Assets Override
+    if 'total_assets' in overrides:
+        total_assets = overrides['total_assets']
+        # Distribute assets
+        if total_assets == 0:
+            savings_401k = 0
+            emergency_fund = 0
+            other_investments = 0
+        elif 'savings_401k' not in overrides:
+            savings_401k = int(total_assets * 0.6)
+            emergency_fund = int(total_assets * 0.1)
+            other_investments = total_assets - savings_401k - emergency_fund
+    else:
+        total_assets = savings_401k + emergency_fund + other_investments
+
+    # 3. Net Worth Override (Takes precedence)
+    if 'net_worth' in overrides:
+        net_worth = overrides['net_worth']
+        # Adjust assets to match net worth + debt
+        target_assets = net_worth + total_debt
+        if target_assets >= 0:
+            total_assets = target_assets
+            # Redistribute new asset total
+            savings_401k = int(total_assets * 0.6)
+            emergency_fund = int(total_assets * 0.1)
+            other_investments = total_assets - savings_401k - emergency_fund
+    else:
+        net_worth = total_assets - total_debt
+
     debt_to_income_ratio = (total_debt / annual_income) if annual_income > 0 else 0
     
     # Insurance needs calculation - realistic
