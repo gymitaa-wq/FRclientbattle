@@ -169,13 +169,99 @@ with st.sidebar:
         st.info("No history yet")
 
 # Main tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🎲 Generate & Run",
     "📊 Results",
     "📄 Details",
     "📈 History",
-    "🤖 Batch Mode"
+    "🤖 Batch Mode",
+    "⚔️ Battle Engine"
 ])
+
+# ============================================================================
+# FUNCTION: RENDER CUSTOMIZATION UI (Reusable)
+# ============================================================================
+def render_profile_customization_ui(key_prefix="run"):
+    """Renders profile customization widgets and returns overrides dict."""
+    with st.expander("📝 Profile Customization (Optional - Extreme Ranges)", expanded=False):
+        st.caption("⚙️ Leave fields at default/zero to let AI randomize. Supports extreme cases!")
+        
+        # Reset callback
+        def reset_customization():
+            st.session_state[f"{key_prefix}_custom_age"] = 0
+            st.session_state[f"{key_prefix}_custom_gender"] = "Random"
+            st.session_state[f"{key_prefix}_custom_marital"] = "Random"
+            st.session_state[f"{key_prefix}_custom_children"] = 0
+            st.session_state[f"{key_prefix}_custom_income"] = 0
+            st.session_state[f"{key_prefix}_custom_401k"] = -1
+            st.session_state[f"{key_prefix}_custom_occupation"] = "Random"
+            st.session_state[f"{key_prefix}_custom_skepticism"] = 0
+            st.session_state[f"{key_prefix}_custom_risk"] = "Random"
+            st.session_state[f"{key_prefix}_custom_smoker"] = "Random"
+            st.session_state[f"{key_prefix}_custom_savings_total"] = -1
+            st.session_state[f"{key_prefix}_custom_debt_total"] = -1
+            st.session_state[f"{key_prefix}_custom_net_worth"] = 0
+            st.session_state[f"{key_prefix}_custom_health_status"] = "Random"
+
+        st.markdown("**👤 Demographics**")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            custom_age = st.number_input("Age (0=Random)", 0, 100, key=f"{key_prefix}_custom_age", help="Range: 18-100")
+        with col2:
+            custom_gender = st.selectbox("Gender", ["Random", "Male", "Female"], key=f"{key_prefix}_custom_gender")
+        with col3:
+            custom_marital = st.selectbox("Marital Status", ["Random", "Single", "Married", "Divorced", "Widowed"], key=f"{key_prefix}_custom_marital")
+        with col4:
+            custom_children = st.number_input("Children (0=Random)", 0, 10, key=f"{key_prefix}_custom_children")
+        
+        st.markdown("**💼 Employment & Income**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            custom_occupation = st.selectbox("Occupation", ["Random", "Software Engineer", "Doctor", "Lawyer", "Teacher", "Sales Manager", "Business Owner", "Executive", "Entrepreneur", "Retired", "Unemployed"], key=f"{key_prefix}_custom_occupation")
+        with col2:
+            custom_income = st.number_input("Annual Income ($0=Random)", 0, 10000000, step=10000, key=f"{key_prefix}_custom_income")
+        with col3:
+            custom_net_worth = st.number_input("Net Worth ($0=Random)", -5000000, 50000000, step=50000, key=f"{key_prefix}_custom_net_worth", value=0)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+             custom_401k = st.number_input("401(k) Balance ($-1=Random)", -1, 5000000, step=10000, key=f"{key_prefix}_custom_401k")
+        with col2:
+            custom_savings_total = st.number_input("Total Liquid Savings ($-1=Random)", -1, 10000000, step=10000, key=f"{key_prefix}_custom_savings_total")
+        with col3:
+            custom_debt_total = st.number_input("Total Debt ($-1=Random)", -1, 10000000, step=10000, key=f"{key_prefix}_custom_debt_total")
+        
+        st.markdown("**🧠 Psychology & Health**")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            custom_skepticism = st.slider("Skepticism", 0, 10, key=f"{key_prefix}_custom_skepticism")
+        with col2:
+            custom_risk = st.selectbox("Risk Tolerance", ["Random", "Very Conservative", "Conservative", "Moderate", "Aggressive", "Very Aggressive"], key=f"{key_prefix}_custom_risk")
+        with col3:
+            custom_health_status = st.selectbox("Health", ["Random", "Excellent", "Good", "Fair", "Poor", "Terminal"], key=f"{key_prefix}_custom_health_status")
+        with col4:
+            custom_smoker = st.selectbox("Smoker?", ["Random", "Yes", "No"], key=f"{key_prefix}_custom_smoker")
+        
+        st.button("🗑️ Reset All Customizations", on_click=reset_customization, type="secondary", key=f"{key_prefix}_reset_btn")
+    
+    # Build dictionary
+    overrides = {}
+    if custom_age > 0: overrides['age'] = custom_age
+    if custom_gender != "Random": overrides['gender'] = custom_gender
+    if custom_marital != "Random": overrides['marital_status'] = custom_marital
+    if custom_children > 0: overrides['num_children'] = custom_children
+    if custom_income > 0: overrides['annual_income'] = custom_income
+    if custom_401k != -1: overrides['savings_401k'] = custom_401k
+    if custom_occupation != "Random": overrides['occupation'] = custom_occupation
+    if custom_skepticism > 0: overrides['skepticism_level'] = custom_skepticism
+    if custom_risk != "Random": overrides['risk_tolerance'] = custom_risk.replace("Very ", "") if "Very " in custom_risk else custom_risk
+    if custom_smoker != "Random": overrides['smoker'] = (custom_smoker == "Yes")
+    if custom_net_worth != 0: overrides['net_worth'] = custom_net_worth
+    if custom_savings_total != -1: overrides['total_assets'] = custom_savings_total
+    if custom_debt_total != -1: overrides['total_debt'] = custom_debt_total
+    if custom_health_status != "Random": overrides['health_status'] = custom_health_status
+    
+    return overrides
 
 # ============================================================================
 # TAB 1: GENERATE & RUN
@@ -184,164 +270,6 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.markdown("## 🎲 Client Profile Generation")
     
-    # --- Profile Customization Controls ---
-    with st.expander("📝 Profile Customization (Optional - Extreme Ranges)", expanded=False):
-        st.caption("⚙️ Leave fields at default/zero to let AI randomize. Supports extreme cases!")
-        
-        # Reset callback function (must be defined before widgets)
-        def reset_customization():
-            st.session_state.custom_age = 0
-            st.session_state.custom_gender = "Random"
-            st.session_state.custom_marital = "Random"
-            st.session_state.custom_children = 0
-            st.session_state.custom_income = 0
-            st.session_state.custom_401k = -1
-            st.session_state.custom_occupation = "Random"
-            st.session_state.custom_skepticism = 0
-            st.session_state.custom_risk = "Random"
-            st.session_state.custom_smoker = "Random"
-            # New fields
-            st.session_state.custom_savings_total = -1
-            st.session_state.custom_debt_total = -1
-            st.session_state.custom_net_worth = 0 
-            st.session_state.custom_health_status = "Random"
-        
-        st.markdown("**👤 Demographics**")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            custom_age = st.number_input("Age (0=Random)", 0, 100, key="custom_age", 
-                                        help="Range: 18-100 for extreme cases")
-        with col2:
-            custom_gender = st.selectbox("Gender", ["Random", "Male", "Female"], key="custom_gender")
-        with col3:
-            custom_marital = st.selectbox("Marital Status", 
-                                         ["Random", "Single", "Married", "Divorced", "Widowed"], 
-                                         key="custom_marital")
-        with col4:
-            custom_children = st.number_input("Children (0=Random)", 0, 10, key="custom_children",
-                                            help="Range: 0-10 for large families")
-        
-        st.markdown("**💼 Employment & Income**")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            custom_occupation = st.selectbox("Occupation", 
-                                            ["Random", "Software Engineer", "Doctor", "Lawyer", 
-                                             "Teacher", "Sales Manager", "Business Owner", 
-                                             "Executive", "Entrepreneur", "Retired", "Unemployed"], 
-                                            key="custom_occupation")
-        with col2:
-            custom_income = st.number_input("Annual Income ($0=Random)", 0, 10000000, step=10000, 
-                                           key="custom_income",
-                                           help="Range: $0-$10M for extreme wealth cases")
-        with col3:
-            custom_net_worth = st.number_input("Net Worth ($0=Random, can be neg)", -5000000, 50000000, step=50000,
-                                              key="custom_net_worth", value=0,
-                                              help="Total Assets - Total Liabilities. Can be negative!")
-
-        # Financial Details Row
-        col1, col2, col3 = st.columns(3)
-        with col1:
-             custom_401k = st.number_input("401(k) Balance ($-1=Random)", -1, 5000000, step=10000, 
-                                         key="custom_401k",
-                                         help="Range: $0-$5M")
-        with col2:
-            custom_savings_total = st.number_input("Total Liquid Savings ($-1=Random)", -1, 10000000, step=10000,
-                                                  key="custom_savings_total",
-                                                  help="Cash + Emergency Fund + Brokerage")
-        with col3:
-            custom_debt_total = st.number_input("Total Debt ($-1=Random)", -1, 10000000, step=10000,
-                                               key="custom_debt_total",
-                                               help="Includes Mortgage, Student Loans, etc.")
-        
-        st.markdown("**🧠 Psychology & Health**")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            custom_skepticism = st.slider("Skepticism", 0, 10, key="custom_skepticism",
-                                         help="0=Random, 1=Trusting, 10=Hostile")
-        with col2:
-            custom_risk = st.selectbox("Risk Tolerance", 
-                                      ["Random", "Very Conservative", "Conservative", 
-                                       "Moderate", "Aggressive", "Very Aggressive"], 
-                                      key="custom_risk")
-        with col3:
-            custom_health_status = st.selectbox("Health", 
-                                               ["Random", "Excellent", "Good", "Fair", "Poor", "Terminal"], 
-                                               key="custom_health_status")
-        with col4:
-            custom_smoker = st.selectbox("Smoker?", ["Random", "Yes", "No"], key="custom_smoker")
-        
-        # Reset button with callback
-        st.button("🗑️ Reset All Customizations", on_click=reset_customization, type="secondary")
-    
-    # Build overrides dictionary
-    overrides = {}
-    if custom_age > 0: 
-        overrides['age'] = custom_age
-    if custom_gender != "Random": 
-        overrides['gender'] = custom_gender
-    if custom_marital != "Random": 
-        overrides['marital_status'] = custom_marital
-    if custom_children > 0: 
-        overrides['num_children'] = custom_children
-    if custom_income > 0: 
-        overrides['annual_income'] = custom_income
-    if custom_401k != -1: 
-        overrides['savings_401k'] = custom_401k
-    if custom_occupation != "Random": 
-        overrides['occupation'] = custom_occupation
-    if custom_skepticism > 0: 
-        overrides['skepticism_level'] = custom_skepticism
-    if custom_risk != "Random": 
-        # Map UI values to internal values
-        risk_map = {
-            "Very Conservative": "Conservative",
-            "Conservative": "Conservative",
-            "Moderate": "Moderate",
-            "Aggressive": "Aggressive",
-            "Very Aggressive": "Aggressive"
-        }
-        overrides['risk_tolerance'] = risk_map.get(custom_risk, custom_risk)
-    if custom_smoker != "Random": 
-        overrides['smoker'] = (custom_smoker == "Yes")
-    # New Mappings
-    if custom_net_worth != 0:
-        overrides['net_worth'] = custom_net_worth
-    if custom_savings_total != -1:
-        overrides['total_assets'] = custom_savings_total # We override total assets directly
-    if custom_debt_total != -1:
-         overrides['total_debt'] = custom_debt_total
-    if custom_health_status != "Random":
-        overrides['health_status'] = custom_health_status
-    
-    col1, col2, col3 = st.columns([2, 1, 2])
-    
-    with col2:
-        if st.button("🎲 Generate Client Profile", use_container_width=True, type="primary"):
-            with st.spinner("Generating client profile..."):
-                profile_dict = generate_structured_client_profile(overrides)
-                profile_text = format_profile_for_display(profile_dict)
-                st.session_state['client_profile_dict'] = profile_dict
-                st.session_state['client_profile_text'] = profile_text
-                st.success("✅ Client profile generated!")
-                st.rerun()
-    
-    # Display profile if generated
-    if 'client_profile_text' in st.session_state:
-        st.markdown("### 👤 Generated Client Profile")
-        st.text_area(
-            "Profile Details",
-            value=st.session_state['client_profile_text'],
-            height=500,
-            key=f"profile_{st.session_state['client_profile_dict']['profile_id']}"
-        )
-        
-        # Quick stats
-        profile = st.session_state['client_profile_dict']
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Age", f"{profile['age']} years")
-        with col2:
-            st.metric("Income", f"${profile['total_household_income']:,}")
         with col3:
             st.metric("Coverage Gap", f"${profile['coverage_gap']:,}")
         with col4:
@@ -840,3 +768,72 @@ with tab5:
 st.markdown("---")
 st.markdown("**Project CAII** - Multi-Agent Insurance Simulation | Streamlined Workflow")
 
+# ============================================================================
+# TAB 6: BATTLE ENGINE
+# ============================================================================
+with tab6:
+    st.markdown("## ⚔️ Battle Engine: Digital Twin Stress Test")
+    st.caption("The most rigorous stress-test. 1. Generate Hybrid Proposal -> 2. Ruthless AI Attack -> 3. Auto-Refined Defense.")
+
+    # Customization UI
+    battle_overrides = render_profile_customization_ui(key_prefix="battle")
+
+    # Generate Profile
+    if st.button("🎲 Generate Client Profile (Battle Mode)", type="primary", key="battle_gen_btn"):
+        with st.spinner("Generating target profile..."):
+            st.session_state.battle_profile = generate_structured_client_profile(battle_overrides)
+            st.rerun()
+
+    # Display Profile & Run Battle
+    if 'battle_profile' in st.session_state:
+        profile = st.session_state.battle_profile
+        
+        with st.expander("👤 Target Client Profile", expanded=False):
+            st.text(format_profile_for_display(profile))
+            
+        st.info(f"Target Acquired: **{profile['profile_id']}** - {profile['age']}yo {profile['occupation']} (Skepticism: {profile['skepticism_level']}/10)")
+        
+        model_name = st.selectbox(
+            "Select Adversary Model",
+            ["gemini-2.0-flash-exp", "gemini-1.5-pro"],
+            key="battle_model",
+            help="Stronger models make for tougher stress tests."
+        )
+
+        if st.button("🔥 BEGIN STRESS TEST", type="primary", use_container_width=True):
+            from battle_engine import run_battle_stress_test
+            from project_caii_framework import callModel
+            
+            status_container = st.empty()
+            
+            def update_status(msg):
+                status_container.info(f"🚀 {msg}")
+            
+            try:
+                # Run the battle
+                results = run_battle_stress_test(
+                    profile, 
+                    callModel, 
+                    model_name=model_name,
+                    status_callback=update_status
+                )
+                
+                status_container.success("✅ Stress Test Complete!")
+                
+                # Display Results
+                st.markdown("### 1️⃣ The Proposal")
+                with st.expander("📄 Stage 1: Hybrid Proposal (Whole Life + Term)", expanded=False):
+                    st.markdown(results['stage_1_proposal'])
+                
+                st.markdown("### 2️⃣ The Attack")
+                with st.expander("😈 Stage 2: AI Adversary 'Vulnerability Report'", expanded=True):
+                    st.error(results['stage_2_attack'])  # Red box for attack
+                
+                st.markdown("### 3️⃣ The Defense")
+                with st.expander("💎 Stage 3: Battle-Hardened Strategy (Pre-bunked)", expanded=True):
+                    st.success(results['stage_3_refined']) # Green box for solution
+                    
+            except Exception as e:
+                status_container.error(f"Battle failed: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
