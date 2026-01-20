@@ -832,7 +832,7 @@ with tab6:
         
         model_name = st.selectbox(
             "Select Adversary Model",
-            ["gemini-2.0-flash-exp", "gemini-1.5-pro"],
+            ["gemini-2.0-flash-exp", "gemini-1.5-flash-8b"],
             key="battle_model",
             help="Stronger models make for tougher stress tests."
         )
