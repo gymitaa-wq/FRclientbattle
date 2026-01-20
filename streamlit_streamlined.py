@@ -270,16 +270,55 @@ def render_profile_customization_ui(key_prefix="run"):
 with tab1:
     st.markdown("## 🎲 Client Profile Generation")
     
-        with col3:
-            st.metric("Coverage Gap", f"${profile['coverage_gap']:,}")
-        with col4:
-            st.metric("Skepticism", f"{profile['skepticism_level']}/10")
+    # --- Profile Customization Controls (Refactored) ---
+    overrides = render_profile_customization_ui(key_prefix="tab1")
+    
+    # Generate Profile Button
+    if st.button("🎲 Generate Client Profile", type="primary"):
+        with st.spinner("Generating detailed client profile..."):
+            st.session_state['client_profile_dict'] = generate_structured_client_profile(overrides)
+            st.session_state['client_profile_text'] = format_profile_for_display(st.session_state['client_profile_dict'])
+            st.success("✅ Client profile generated!")
+            st.rerun()
+
+    # Display Profile
+    if 'client_profile_text' in st.session_state:
+        st.markdown("### 👤 Generated Client Profile")
         
-        st.markdown("---")
+        # Two column layout for profile display
+        col1, col2 = st.columns([1, 1])
         
-        # Run simulation button
-        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            st.text_area(
+                "Profile Details",
+                value=st.session_state['client_profile_text'],
+                height=400,
+                key=f"profile_{st.session_state['client_profile_dict']['profile_id']}"
+            )
+        
         with col2:
+            # Quick stats
+            profile = st.session_state['client_profile_dict']
+            st.metric("Age", f"{profile['age']} years")
+            st.metric("Income", f"${profile['total_household_income']:,}")
+            st.metric("Coverage Gap", f"${profile['coverage_gap']:,}")
+            st.metric("Skepticism", f"{profile['skepticism_level']}/10")
+            
+            st.markdown("---")
+            
+            # Model Selection
+            model_option = st.selectbox(
+                "Select AI Model for Simulation", 
+                ["gemini-2.0-flash-exp", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-1.5-flash"],
+                index=0,
+                help="Gemini 2.0 Flash Exp is recommended for best performance."
+            )
+            
+            # Simulation controls
+            max_iterations = st.number_input("Max Iterations", 1, 10, 5, help="Maximum conversation rounds")
+            enable_refinement = st.checkbox("Enable Adaptive Refinement", value=True, help="AI learns from rejections")
+            
+            # Run Simulation Button
             if st.button("🚀 Run Simulation", use_container_width=True, type="primary"):
                 with st.spinner("Running simulation... (this may take 2-3 minutes)"):
                     try:
@@ -307,8 +346,6 @@ with tab1:
                         if "Rate Limit" in error_msg:
                             st.error(f"🛑 {error_msg}")
                             st.warning("👉 Look at the sidebar on the left to enter your key!")
-                            # In a single simulation context, we don't break a loop, but stop further processing.
-                            # For a batch, 'break' would stop the loop. Here, we just show the error.
                         else:
                             st.error(f"❌ Simulation failed: {e}")
                         import traceback
