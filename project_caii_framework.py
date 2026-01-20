@@ -140,10 +140,9 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Use new google.genai API
             client = genai.Client(api_key=api_key)
             
-            # Define fallback hierarchy (prioritize speed/cost, then capacity)
+            # Define fallback hierarchy (only use confirmed working models)
             model_hierarchy = [
-                'gemini-2.0-flash-exp',  # Latest, fast
-                'gemini-1.5-flash-8b'    # Lowest latency, high throughput
+                'gemini-2.0-flash-exp',  # Latest, fast, confirmed working
             ]
             
             # Determine starting model based on input
@@ -151,7 +150,7 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             if "gemini 3" in model.lower() or "2.5" in model.lower():
                 start_model = 'gemini-2.0-flash-exp'
             elif "8b" in model.lower():
-                start_model = 'gemini-1.5-flash-8b'
+                start_model = 'gemini-2.0-flash-exp'  # 8b model not available, use 2.0
             elif "1.5 flash" in model.lower():
                  # 1.5-flash is having API issues, upgrade to 2.0
                 start_model = 'gemini-2.0-flash-exp'

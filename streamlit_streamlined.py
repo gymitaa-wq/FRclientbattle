@@ -832,9 +832,9 @@ with tab6:
         
         model_name = st.selectbox(
             "Select Adversary Model",
-            ["gemini-2.0-flash-exp", "gemini-1.5-flash-8b"],
+            ["gemini-2.0-flash-exp"],
             key="battle_model",
-            help="Stronger models make for tougher stress tests."
+            help="Using the latest Gemini model for maximum stress testing."
         )
 
         if st.button("🔥 BEGIN STRESS TEST", type="primary", use_container_width=True):
