@@ -270,10 +270,10 @@ def render_profile_customization_ui(key_prefix="run"):
 with tab1:
     st.markdown("## 🎲 Client Profile Generation")
     
-        with col3:
-            st.metric("Coverage Gap", f"${profile['coverage_gap']:,}")
-        with col4:
-            st.metric("Skepticism", f"{profile['skepticism_level']}/10")
+# with col3:
+# st.metric, f"${profile['coverage_gap']:,}")
+# with col4:
+# st.metric, f"{profile['skepticism_level']}/10")
         
         st.markdown("---")
         
