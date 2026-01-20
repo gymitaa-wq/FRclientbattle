@@ -785,10 +785,17 @@ with tab5:
                     # Update progress
                     progress_bar.progress(sim_num / batch_size)
                     
-                    # Save to DB immediately
-                    file_path = save_simulation(result, current_user)
-                    st.toast(f"Saved Sim #{sim_num} for user '{current_user}'", icon="💾")
-                    print(f"DEBUG: Saved batch run {sim_num} to DB for user {current_user}")
+                    # Save to DB immediately with explicit error handling
+                    try:
+                        sim_id = save_simulation(result, current_user)
+                        st.toast(f"✅ Saved Sim #{sim_num} (ID: {sim_id}) for user '{current_user}'", icon="💾")
+                        print(f"DEBUG: Saved batch run {sim_num} to DB with ID {sim_id} for user {current_user}")
+                    except Exception as save_err:
+                        st.error(f"❌ Failed to save Sim #{sim_num}: {save_err}")
+                        print(f"ERROR: Failed to save batch sim {sim_num}: {save_err}")
+                        import traceback
+                        traceback.print_exc()
+                    
                     
                 except Exception as e:
                     st.error(f"Error in Simulation {sim_num}: {e}")
