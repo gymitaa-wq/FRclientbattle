@@ -51,6 +51,34 @@ class SimulationResult(Base):
     outcome_analysis_data = Column(JSON) # Outcome analysis dict
     final_products_data = Column(JSON) # Full product details
 
+
+class BattleResult(Base):
+    """Model for storing Battle Engine stress test results"""
+    __tablename__ = 'battle_results'
+    
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    username = Column(String(100), index=True)
+    
+    # Client Profile (key fields)
+    client_id = Column(String(50))
+    age = Column(Integer)
+    occupation = Column(String(100))
+    skepticism_level = Column(Integer)  # 1-10 scale
+    
+    # Model used for stress test
+    model_name = Column(String(50))
+    
+    # Battle Results
+    success = Column(Boolean)  # Did all 3 stages complete?
+    error_message = Column(Text)  # If failed, what was the error?
+    
+    # Full Data Blobs (all three stages)
+    profile_data = Column(JSON)  # Full client profile
+    stage1_proposal = Column(Text)  # Initial hybrid proposal
+    stage2_attack = Column(Text)  # AI adversary critique
+    stage3_defense = Column(Text)  # Refined battle-hardened proposal
+
 def get_database_url():
     """Get DB URL from environment or default to local SQLite"""
     # Render provides DATABASE_URL for Postgres
@@ -235,6 +263,164 @@ def get_stats(username: Optional[str] = None) -> Dict[str, Any]:
             "total_simulations": total,
             "conversion_rate": (wins / total * 100) if total > 0 else 0.0,
             "avg_friction_score": float(avg_friction),
+            "latest_timestamp": latest_ts
+        }
+    finally:
+        db.close()
+
+
+# ============================================================================
+# BATTLE ENGINE DATA ACCESS FUNCTIONS
+# ============================================================================
+
+def save_battle_result(
+    profile: Dict[str, Any],
+    stage1_proposal: str,
+    stage2_attack: str,
+    stage3_defense: str,
+    model_name: str,
+    username: str = "anonymous",
+    success: bool = True,
+    error_message: str = None
+) -> int:
+    """Save a Battle Engine stress test result to the database"""
+    db = SessionLocal()
+    try:
+        # Extract key profile fields
+        client_id = profile.get('profile_id', 'unknown')
+        age = profile.get('age', 0)
+        occupation = profile.get('occupation', 'unknown')
+        skepticism_level = profile.get('ai_skepticism_level', 5)
+        
+        # Create record
+        db_record = BattleResult(
+            username=username,
+            timestamp=datetime.now(),
+            
+            # Profile fields
+            client_id=client_id,
+            age=age,
+            occupation=occupation,
+            skepticism_level=skepticism_level,
+            
+            # Battle metadata
+            model_name=model_name,
+            success=success,
+            error_message=error_message,
+            
+            # Full data blobs
+            profile_data=profile,
+            stage1_proposal=stage1_proposal,
+            stage2_attack=stage2_attack,
+            stage3_defense=stage3_defense
+        )
+        
+        db.add(db_record)
+        db.commit()
+        db.refresh(db_record)
+        return db_record.id
+    except Exception as e:
+        print(f"Error saving battle result to DB: {e}")
+        db.rollback()
+        raise e
+    finally:
+        db.close()
+
+
+def load_battle_history_df(username: Optional[str] = None):
+    """Load battle history as a Pandas DataFrame"""
+    import pandas as pd
+    
+    db = SessionLocal()
+    try:
+        query = db.query(BattleResult)
+        if username:
+            query = query.filter(BattleResult.username == username)
+            
+        results = query.order_by(BattleResult.timestamp.desc()).all()
+        
+        if not results:
+            return pd.DataFrame()
+            
+        # Convert to dict list for DataFrame
+        data = []
+        for r in results:
+            row = {
+                "id": r.id,
+                "username": r.username,
+                "timestamp": r.timestamp,
+                "client_id": r.client_id,
+                "age": r.age,
+                "occupation": r.occupation,
+                "skepticism": f"{r.skepticism_level}/10",
+                "model": r.model_name,
+                "status": "✅ Success" if r.success else "❌ Failed",
+                "success": r.success
+            }
+            data.append(row)
+            
+        return pd.DataFrame(data)
+    finally:
+        db.close()
+
+
+def get_battle_details(battle_id: int):
+    """Fetch full details for a single battle"""
+    db = SessionLocal()
+    try:
+        result = db.query(BattleResult).filter(BattleResult.id == battle_id).first()
+        if result:
+            return {
+                "id": result.id,
+                "timestamp": result.timestamp,
+                "username": result.username,
+                "client_id": result.client_id,
+                "age": result.age,
+                "occupation": result.occupation,
+                "skepticism_level": result.skepticism_level,
+                "model_name": result.model_name,
+                "success": result.success,
+                "error_message": result.error_message,
+                "profile_data": result.profile_data,
+                "stage1_proposal": result.stage1_proposal,
+                "stage2_attack": result.stage2_attack,
+                "stage3_defense": result.stage3_defense
+            }
+        return None
+    finally:
+        db.close()
+
+
+def get_battle_stats(username: Optional[str] = None) -> Dict[str, Any]:
+    """Get aggregated battle statistics"""
+    db = SessionLocal()
+    try:
+        query = db.query(BattleResult)
+        if username:
+            query = query.filter(BattleResult.username == username)
+            
+        total = query.count()
+        if total == 0:
+            return {
+                "total_battles": 0,
+                "success_rate": 0.0,
+                "avg_skepticism": 0.0,
+                "latest_timestamp": "N/A"
+            }
+            
+        successes = query.filter(BattleResult.success == True).count()
+        
+        # Calculate avg skepticism
+        from sqlalchemy import func
+        avg_skepticism = db.query(func.avg(BattleResult.skepticism_level)).scalar() or 0.0
+        
+        latest = query.order_by(BattleResult.timestamp.desc()).first()
+        latest_ts = latest.timestamp.isoformat() if latest else "N/A"
+        
+        return {
+            "total_battles": total,
+            "success_rate": (successes / total * 100) if total > 0 else 0.0,
+            "avg_skepticism": float(avg_skepticism),
             "latest_timestamp": latest_ts
         }
     finally:

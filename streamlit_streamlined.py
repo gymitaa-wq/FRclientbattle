@@ -840,6 +840,7 @@ with tab6:
         if st.button("🔥 BEGIN STRESS TEST", type="primary", use_container_width=True):
             from battle_engine import run_battle_stress_test
             from project_caii_framework import callModel
+            from database import save_battle_result
             
             status_container = st.empty()
             
@@ -857,6 +858,24 @@ with tab6:
                 
                 status_container.success("✅ Stress Test Complete!")
                 
+                # Save to database
+                try:
+                    current_user = get_current_username()
+                    battle_id = save_battle_result(
+                        profile=profile,
+                        stage1_proposal=results['stage_1_proposal'],
+                        stage2_attack=results['stage_2_attack'],
+                        stage3_defense=results['stage_3_refined'],
+                        model_name=model_name,
+                        username=current_user,
+                        success=True,
+                        error_message=None
+                    )
+                    st.toast(f"Battle #{battle_id} saved to history", icon="💾")
+                except Exception as e:
+                    print(f"Error saving battle result: {e}")
+                    st.warning(f"Battle completed but failed to save: {e}")
+                
                 # Display Results
                 st.markdown("### 1️⃣ The Proposal")
                 with st.expander("📄 Stage 1: Hybrid Proposal (Whole Life + Term)", expanded=False):
@@ -871,6 +890,107 @@ with tab6:
                     st.success(results['stage_3_refined']) # Green box for solution
                     
             except Exception as e:
-                status_container.error(f"Battle failed: {str(e)}")
+                error_msg = str(e)
+                status_container.error(f"Battle failed: {error_msg}")
+                
+                # Save failed battle
+                try:
+                    current_user = get_current_username()
+                    save_battle_result(
+                        profile=profile,
+                        stage1_proposal="",
+                        stage2_attack="",
+                        stage3_defense="",
+                        model_name=model_name,
+                        username=current_user,
+                        success=False,
+                        error_message=error_msg
+                    )
+                except Exception as save_err:
+                    print(f"Failed to save error battle: {save_err}")
+                
                 import traceback
                 st.code(traceback.format_exc())
+    
+    # ============================================================================
+    # BATTLE HISTORY SECTION
+    # ============================================================================
+    st.markdown("---")
+    st.markdown("## 📜 Battle History")
+    st.caption("Click any row to review the full 3-stage battle report")
+    
+    from database import load_battle_history_df, get_battle_details, get_battle_stats
+    
+    current_user = get_current_username()
+    
+    try:
+        # Show stats
+        battle_stats = get_battle_stats(current_user)
+        if battle_stats['total_battles'] > 0:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Battles", battle_stats['total_battles'])
+            with col2:
+                st.metric("Success Rate", f"{battle_stats['success_rate']:.1f}%")
+            with col3:
+                st.metric("Avg Skepticism", f"{battle_stats['avg_skepticism']:.1f}/10")
+        
+        # Load and display battle history
+        battle_df = load_battle_history_df(current_user)
+        
+        if not battle_df.empty:
+            st.markdown("### 🗂️ Click a row to view full battle details")
+            
+            event = st.dataframe(
+                battle_df,
+                use_container_width=True,
+                height=300,
+                on_select="rerun",
+                selection_mode="single-row",
+                hide_index=True
+            )
+            
+            # Show details if row selected
+            if len(event.selection.rows) > 0:
+                selected_index = event.selection.rows[0]
+                row_data = battle_df.iloc[selected_index]
+                battle_id = int(row_data['id'])
+                
+                details = get_battle_details(battle_id)
+                
+                if details and details['success']:
+                    st.markdown("---")
+                    st.markdown(f"## ⚔️ Battle Report #{battle_id}")
+                    
+                    # Battle metadata
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Client ID", details['client_id'])
+                    with col2:
+                        st.metric("Age", details['age'])
+                    with col3:
+                        st.metric("Skepticism", f"{details['skepticism_level']}/10")
+                    with col4:
+                        st.metric("Model", details['model_name'])
+                    
+                    # Three stages
+                    st.markdown("### 1️⃣ Initial Proposal")
+                    with st.expander("📄 View Stage 1: Hybrid Proposal", expanded=False):
+                        st.markdown(details['stage1_proposal'])
+                    
+                    st.markdown("### 2️⃣ AI Attack")
+                    with st.expander("😈 View Stage 2: Adversary Report", expanded=True):
+                        st.error(details['stage2_attack'])
+                    
+                    st.markdown("### 3️⃣ Refined Defense")
+                    with st.expander("💎 View Stage 3: Battle-Hardened Strategy", expanded=True):
+                        st.success(details['stage3_defense'])
+                elif details and not details['success']:
+                    st.error(f"❌ Battle #{battle_id} failed with error: {details['error_message']}")
+        else:
+            st.info("📭 No battle history yet. Run a stress test above to begin!")
+            
+    except Exception as e:
+        st.error(f"Error loading battle history: {e}")
+        import traceback
+        st.code(traceback.format_exc())
