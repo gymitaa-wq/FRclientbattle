@@ -592,6 +592,7 @@ with tab4:
     st.markdown("## 📈 My Simulation History")
     
     current_user = get_current_username()
+    st.caption(f"Viewing history for user: **`{current_user}`**")
     
     # Import new helper
     from database import get_simulation_details
@@ -715,7 +716,10 @@ with tab5:
         # Stop button logic (place holder)
         stop_placeholder = st.empty()
         
+        
         current_user = get_current_username()
+        
+        st.info(f"🚀 **Starting batch mode for user: `{current_user}`**")
         
         stats_col1, stats_col2, stats_col3 = st.columns(3)
         wins = 0
