@@ -869,7 +869,7 @@ with tab6:
                 
                 status_container.success("✅ Stress Test Complete!")
                 
-                # Save to database
+                # Save to database with new fields
                 try:
                     current_user = get_current_username()
                     battle_id = save_battle_result(
@@ -877,6 +877,9 @@ with tab6:
                         stage1_proposal=results['stage_1_proposal'],
                         stage2_attack=results['stage_2_attack'],
                         stage3_defense=results['stage_3_refined'],
+                        friction_score=results.get('stage_4_friction_score'),
+                        friction_analysis=results.get('stage_4_friction_analysis'),
+                        public_ai_response=results.get('stage_5_public_ai_response'),
                         model_name=model_name,
                         username=current_user,
                         success=True,
@@ -887,18 +890,41 @@ with tab6:
                     print(f"Error saving battle result: {e}")
                     st.warning(f"Battle completed but failed to save: {e}")
                 
+                # Display Friction Score Metric
+                friction_score = results.get('stage_4_friction_score', 0)
+                st.markdown("---")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("📊 Friction Score", f"{friction_score:.1f}/100")
+                with col2:
+                    friction_level = "🟢 Low" if friction_score < 30 else "🟡 Moderate" if friction_score < 60 else "🔴 High"
+                    st.metric("Friction Level", friction_level)
+                with col3:
+                    st.metric("Model Used", model_name.split('-')[0].upper())
+                
+                st.markdown("---")
+                
                 # Display Results
                 st.markdown("### 1️⃣ The Proposal")
                 with st.expander("📄 Stage 1: Hybrid Proposal (Whole Life + Term)", expanded=False):
                     st.markdown(results['stage_1_proposal'])
                 
                 st.markdown("### 2️⃣ The Attack")
-                with st.expander("😈 Stage 2: AI Adversary 'Vulnerability Report'", expanded=True):
+                with st.expander("😈 Stage 2: AI Adversary 'Vulnerability Report'", expanded=False):
                     st.error(results['stage_2_attack'])  # Red box for attack
                 
                 st.markdown("### 3️⃣ The Defense")
                 with st.expander("💎 Stage 3: Battle-Hardened Strategy (Pre-bunked)", expanded=True):
                     st.success(results['stage_3_refined']) # Green box for solution
+                
+                st.markdown("### 4️⃣ Friction Analysis")
+                with st.expander("📊 Stage 4: Friction Score Analysis", expanded=False):
+                    st.info(results.get('stage_4_friction_analysis', 'Not available'))
+                
+                st.markdown("### 5️⃣ Public AI Simulation")
+                st.caption("💡 This is what a client would see if they consulted ChatGPT, Claude, or Gemini about your proposal")
+                with st.expander("🤖 Stage 5: Public AI Review (Client Perspective)", expanded=True):
+                    st.warning(results.get('stage_5_public_ai_response', 'Not available'))
                     
             except Exception as e:
                 error_msg = str(e)
@@ -974,7 +1000,7 @@ with tab6:
                     st.markdown(f"## ⚔️ Battle Report #{battle_id}")
                     
                     # Battle metadata
-                    col1, col2, col3, col4 = st.columns(4)
+                    col1, col2, col3, col4, col5 = st.columns(5)
                     with col1:
                         st.metric("Client ID", details['client_id'])
                     with col2:
@@ -983,19 +1009,35 @@ with tab6:
                         st.metric("Skepticism", f"{details['skepticism_level']}/10")
                     with col4:
                         st.metric("Model", details['model_name'])
+                    with col5:
+                        friction = details.get('friction_score', 0)
+                        if friction:
+                            st.metric("Friction Score", f"{friction:.1f}/100")
                     
-                    # Three stages
+                    # Five stages
                     st.markdown("### 1️⃣ Initial Proposal")
                     with st.expander("📄 View Stage 1: Hybrid Proposal", expanded=False):
                         st.markdown(details['stage1_proposal'])
                     
                     st.markdown("### 2️⃣ AI Attack")
-                    with st.expander("😈 View Stage 2: Adversary Report", expanded=True):
+                    with st.expander("😈 View Stage 2: Adversary Report", expanded=False):
                         st.error(details['stage2_attack'])
                     
                     st.markdown("### 3️⃣ Refined Defense")
-                    with st.expander("💎 View Stage 3: Battle-Hardened Strategy", expanded=True):
+                    with st.expander("💎 View Stage 3: Battle-Hardened Strategy", expanded=False):
                         st.success(details['stage3_defense'])
+                    
+                    # Show new stages if available
+                    if details.get('friction_analysis'):
+                        st.markdown("### 4️⃣ Friction Analysis")
+                        with st.expander("📊 View Stage 4: Friction Score Breakdown", expanded=False):
+                            st.info(details['friction_analysis'])
+                    
+                    if details.get('public_ai_response'):
+                        st.markdown("### 5️⃣ Public AI Simulation")
+                        st.caption("💡 What the client would see if they consulted ChatGPT/Claude/Gemini")
+                        with st.expander("🤖 View Stage 5: Public AI Review", expanded=False):
+                            st.warning(details['public_ai_response'])
                 elif details and not details['success']:
                     st.error(f"❌ Battle #{battle_id} failed with error: {details['error_message']}")
         else:

@@ -78,6 +78,11 @@ class BattleResult(Base):
     stage1_proposal = Column(Text)  # Initial hybrid proposal
     stage2_attack = Column(Text)  # AI adversary critique
     stage3_defense = Column(Text)  # Refined battle-hardened proposal
+    
+    # New: Friction Score and Public AI Simulation
+    friction_score = Column(Float)  # 0-100 score of proposal persuasiveness
+    friction_analysis = Column(Text)  # Detailed analysis of friction points
+    public_ai_response = Column(Text)  # What client sees from ChatGPT/Claude/Gemini
 
 def get_database_url():
     """Get DB URL from environment or default to local SQLite"""
@@ -281,7 +286,10 @@ def save_battle_result(
     model_name: str,
     username: str = "anonymous",
     success: bool = True,
-    error_message: str = None
+    error_message: str = None,
+    friction_score: float = None,
+    friction_analysis: str = None,
+    public_ai_response: str = None
 ) -> int:
     """Save a Battle Engine stress test result to the database"""
     db = SessionLocal()
@@ -312,7 +320,12 @@ def save_battle_result(
             profile_data=profile,
             stage1_proposal=stage1_proposal,
             stage2_attack=stage2_attack,
-            stage3_defense=stage3_defense
+            stage3_defense=stage3_defense,
+            
+            # New: Friction and Public AI fields
+            friction_score=friction_score,
+            friction_analysis=friction_analysis,
+            public_ai_response=public_ai_response
         )
         
         db.add(db_record)
@@ -384,7 +397,10 @@ def get_battle_details(battle_id: int):
                 "profile_data": result.profile_data,
                 "stage1_proposal": result.stage1_proposal,
                 "stage2_attack": result.stage2_attack,
-                "stage3_defense": result.stage3_defense
+                "stage3_defense": result.stage3_defense,
+                "friction_score": result.friction_score,
+                "friction_analysis": result.friction_analysis,
+                "public_ai_response": result.public_ai_response
             }
         return None
     finally:

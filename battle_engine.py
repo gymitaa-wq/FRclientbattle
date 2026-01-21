@@ -129,9 +129,115 @@ It should look like a polished document, but bulletproof against the specific at
 
     refined_proposal_text = callModel(refinement_prompt, model=model_name, max_tokens=3000)
     
+    # ---------------------------------------------------------
+    # STAGE 4: FRICTION SCORE CALCULATION
+    # ---------------------------------------------------------
+    if status_callback:
+        status_callback("Stage 4/5: Calculating Friction Score...")
+        
+    friction_prompt = f"""
+You are analyzing a battle-tested financial proposal to determine how persuasive and low-friction it is.
+
+CLIENT PROFILE:
+{profile_context}
+
+BATTLE-HARDENED PROPOSAL:
+{refined_proposal_text}
+
+TASK:
+Evaluate how well this proposal addresses potential objections and reduces client friction.
+
+Consider:
+1. **Clarity**: How easy is it to understand?
+2. **Pre-bunking**: Does it address objections before they're raised?
+3. **Value Proposition**: Is the ROI/benefit clearly articulated?
+4. **Trust Signals**: Does it build credibility?
+5. **Complexity Management**: Is it comprehensive without being overwhelming?
+6. **Emotional Resonance**: Does it connect with client needs/fears?
+
+## FRICTION SCORE (0-100)
+Rate the proposal's friction level:
+- 0-20: Extremely persuasive, minimal resistance expected
+- 21-40: Strong proposal, minor concerns may arise
+- 41-60: Moderate friction, requires active objection handling
+- 61-80: High friction, significant persuasion needed
+- 81-100: Very high friction, likely rejection
+
+Provide just the number: [FRICTION_SCORE]
+
+## FRICTION ANALYSIS
+Explain your score - what creates friction and what reduces it?
+"""
+
+    try:
+        friction_response = callModel(friction_prompt, model=model_name, max_tokens=1000)
+        
+        # Extract friction score
+        import re
+        friction_score = 50.0  # Default
+        score_match = re.search(r'\[FRICTION_SCORE\]\s*:?\s*(\d+)', friction_response)
+        if score_match:
+            friction_score = float(score_match.group(1))
+        else:
+            # Try to find any number in a friction score section
+            friction_section = re.search(r'FRICTION SCORE.*?(\d+)', friction_response, re.IGNORECASE | re.DOTALL)
+            if friction_section:
+                friction_score = float(friction_section.group(1))
+                
+        print(f"    ✓ Friction Score: {friction_score}/100")
+    except Exception as e:
+        print(f"    ✗ Friction calculation failed: {e}")
+        friction_score = 50.0
+        friction_response = f"ERROR: {str(e)}"
+    
+    # ---------------------------------------------------------
+    # STAGE 5: PUBLIC AI SIMULATION
+    # ---------------------------------------------------------
+    if status_callback:
+        status_callback("Stage 5/5: Simulating Public AI Consultation...")
+        
+    public_ai_prompt = f"""
+You are a helpful, balanced AI assistant (like ChatGPT, Claude, or Gemini) being consulted by a client who just received this financial proposal from a Northwestern Mutual advisor.
+
+CLIENT PROFILE:
+{profile_context}
+
+CLIENT'S QUESTION:
+"I just received this financial proposal from a Northwestern Mutual advisor. Can you review it and tell me if it's a good deal? Should I accept it or are there better alternatives?"
+
+ADVISOR'S PROPOSAL:
+{refined_proposal_text}
+
+YOUR RESPONSE:
+Provide a balanced, consumer-focused review that:
+1. Acknowledges both strengths and potential concerns
+2. Compares to common alternatives (Term + DIY investing, robo-advisors, etc.)
+3. Highlights any red flags (fees, complexity, sales bias)
+4. Identifies genuine value propositions
+5. Provides a clear recommendation: Accept, Negotiate, or Decline
+
+Be fair but skeptical. You want to protect the consumer while acknowledging legitimate value where it exists.
+
+## YOUR ANALYSIS
+[Provide your complete review here]
+
+## FINAL RECOMMENDATION
+**ACCEPT** / **NEGOTIATE** / **DECLINE**
+"""
+
+    try:
+        public_ai_response = callModel(public_ai_prompt, model=model_name, max_tokens=2500)
+        print(f"    ✓ Public AI simulation complete ({len(public_ai_response)} chars)")
+    except Exception as e:
+        print(f"    ✗ Public AI simulation failed: {e}")
+        public_ai_response = f"ERROR: {str(e)}"
+    
     return {
         "timestamp": datetime.now().isoformat(),
         "stage_1_proposal": proposal_text,
         "stage_2_attack": attack_text,
-        "stage_3_refined": refined_proposal_text
+        "stage_3_refined": refined_proposal_text,
+        "stage_4_friction_score": friction_score,
+        "stage_4_friction_analysis": friction_response,
+        "stage_5_public_ai_response": public_ai_response
     }
