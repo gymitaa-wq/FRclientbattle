@@ -90,6 +90,161 @@ if not require_login():
 st.markdown('<p class="main-header">🎯 Insurance Simulation - Streamlined Workflow</p>', unsafe_allow_html=True)
 st.markdown("**Profile-Based Simulation with Iteration Summaries & Deal Analysis**")
 
+# ==============================================================================
+# WELCOME SECTION & USER GUIDE
+# ==============================================================================
+with st.expander("📖 **Welcome! Click here for Instructions & User Guide**", expanded=False):
+    st.markdown("""
+    ## 🎯 What is this Tool?
+    
+    This is an **AI-Powered Insurance Simulation Platform** designed for Northwestern Mutual advisors to:
+    
+    1. **Test proposals** against AI-powered client objections
+    2. **Optimize strategies** before real client meetings
+    3. **Battle-test recommendations** against public AI (ChatGPT, Claude, Gemini)
+    4. **Track performance** with detailed analytics
+    
+    ---
+    
+    ## 🚀 Quick Start Guide
+    
+    ### For First-Time Users:
+    
+    1. **Start with Tab 1 ("Generate & Run")**
+       - Generate a random client profile OR customize one
+       - Run a simulation to see how your proposal performs
+    
+    2. **Review Results in Tab 2 ("Results")**
+       - See if the deal closed and why
+       - Review friction scores and winning factors
+    
+    3. **Try the Battle Engine (Tab 6)**
+       - Ultimate stress test: 5-stage AI adversary attack
+       - See what clients would hear from ChatGPT/Claude/Gemini
+    
+    ---
+    
+    ## 📑 Tab Guide
+    
+    ### Tab 1: 🎲 Generate & Run
+    **Purpose**: Create client profiles and run simulations
+    
+    **How to use**:
+    1. Click "Generate Client Profile" (or customize first)
+    2. Review the profile
+    3. Set max iterations (recommended: 5)
+    4. Click "Run Simulation"
+    5. Results appear below automatically
+    
+    **Pro tip**: Enable "Adaptive Refinement" for realistic simulations
+    
+    ---
+    
+    ### Tab 2: 📊 Results
+    **Purpose**: View detailed simulation outcomes
+    
+    **Shows**:
+    - Deal status (Closed/Not Closed)
+    - Final friction score (0-100, lower is better)
+    - Iteration-by-iteration breakdown
+    - Winning factors or rejection reasons
+    
+    ---
+    
+    ### Tab 3: 📄 Details
+    **Purpose**: Deep dive into each iteration
+    
+    **View**:
+    - Full advisor proposals
+    - Complete AI critiques
+    - Client decisions with reasoning
+    
+    ---
+    
+    ### Tab 4: 📈 History
+    **Purpose**: Track all your simulations
+    
+    **Features**:
+    - Searchable table of all past simulations
+    - Click any row to see full conversation details
+    - Download history as CSV
+    - Performance statistics
+    
+    ---
+    
+    ### Tab 5: 🤖 Batch Mode
+    **Purpose**: Run multiple simulations automatically
+    
+    **Use case**: Generate training data, test strategies at scale
+    
+    **How to use**:
+    1. Set number of simulations (1-50)
+    2. Configure model and settings
+    3. Click "Start Automatic Batch"
+    4. Watch live progress and statistics
+    
+    **Warning**: Each simulation takes 1-3 minutes. Budget your time!
+    
+    ---
+    
+    ### Tab 6: ⚔️ Battle Engine ⭐ NEW!
+    **Purpose**: Ultimate stress test with 5-stage AI adversary attack
+    
+    **The 5 Stages**:
+    1. **Proposal**: Generate hybrid strategy (Whole Life + Term)
+    2. **Attack**: AI adversary finds all weaknesses
+    3. **Defense**: Auto-refined battle-hardened proposal
+    4. **Friction Score**: Quantify persuasiveness (0-100)
+    5. **Public AI Simulation**: What clients see from ChatGPT/Claude/Gemini
+    
+    **How to use**:
+    1. Generate client profile (or customize)
+    2. Select adversary model (Gemini 3 recommended)
+    3. Click "BEGIN STRESS TEST"
+    4. Wait 3-5 minutes for all 5 stages
+    5. Review friction score and public AI feedback
+    
+    **Why it matters**: Know exactly what clients will hear when they "fact-check" your proposal online!
+    
+    ---
+    
+    ## 💡 Key Metrics Explained
+    
+    - **Friction Score (0-100)**:
+      - 0-20: 🟢 Extremely persuasive
+      - 21-40: 🟢 Strong proposal
+      - 41-60: 🟡 Moderate friction
+      - 61-80: 🔴 High friction
+      - 81-100: 🔴 Very high friction
+    
+    - **Deal Closed**: Client accepted the proposal
+    - **Iterations**: Number of proposal refinements
+    - **Conversion Rate**: % of simulations that closed
+    
+    ---
+    
+    ## 🔑 Best Practices
+    
+    1. **Start Simple**: Use default settings for your first few simulations
+    2. **Customize Wisely**: Adjust skepticism level to match real client types
+    3. **Review Details**: Don't just look at win/loss - study the friction points
+    4. **Use Battle Engine**: Before important client meetings, battle-test your proposal
+    5. **Track History**: Compare proposals to see what works best
+    
+    ---
+    
+    ## ❓ Need Help?
+    
+    - **API Key Issues**: Check sidebar configuration
+    - **Slow Performance**: Reduce max iterations or use batch mode during off-hours
+    - **Understanding Results**: Review the "Details" tab for full context
+    - **Battle Engine**: Allow 3-5 minutes for all 5 stages to complete
+    
+    ---
+    
+    Ready to get started? Close this guide and head to **Tab 1: Generate & Run** 🚀
+    """)
+
 # Sidebar
 with st.sidebar:
     # Show logged-in user info
@@ -268,6 +423,9 @@ def render_profile_customization_ui(key_prefix="run"):
 # ============================================================================
 
 with tab1:
+    st.info("""📋 **Tab 1: Generate & Run** - Create a client profile (random or customized), then run a simulation 
+    to see how your proposal performs against AI-powered client objections. Results appear below automatically.""")
+    
     st.markdown("## 🎲 Client Profile Generation")
     
     # --- Profile Customization Controls (Refactored) ---
@@ -465,6 +623,8 @@ with tab1:
 # ============================================================================
 
 with tab2:
+    st.info("""📊 **Tab 2: Results** - View detailed outcomes of your last simulation including deal status, 
+    friction scores, and winning factors. Switch to the 'Details' tab for full iteration breakdowns.""")
     if 'simulation_result' in st.session_state:
         result = st.session_state['simulation_result']
         analysis = result['outcome_analysis']
@@ -537,6 +697,8 @@ with tab2:
 # ============================================================================
 
 with tab3:
+    st.info("""📄 **Tab 3: Details** - Deep dive into each iteration showing full advisor proposals, 
+    AI critiques, and client decisions. Expand any iteration to see complete conversation history.""")
     if 'simulation_result' in st.session_state:
         result = st.session_state['simulation_result']
         
@@ -589,6 +751,9 @@ with tab3:
 # ============================================================================
 
 with tab4:
+    st.info("""📈 **Tab 4: History** - Track all your past simulations. Click any row to view full conversation 
+    details. Download as CSV or view statistics. History is saved per user account.""")
+    
     st.markdown("## 📈 My Simulation History")
     
     current_user = get_current_username()
@@ -692,6 +857,9 @@ with tab4:
 # ============================================================================
 
 with tab5:
+    st.info("""🤖 **Tab 5: Batch Mode** - Run multiple simulations automatically to generate training data 
+    or test strategies at scale. Each simulation takes 1-3 minutes. Use during off-hours for best performance.""")
+    
     st.markdown("## 🤖 Automatic Batch Simulator")
     st.markdown("Run continuous simulations to generate dataset and test robustness.")
     
@@ -820,6 +988,10 @@ st.markdown("**Project CAII** - Multi-Agent Insurance Simulation | Streamlined W
 # TAB 6: BATTLE ENGINE
 # ============================================================================
 with tab6:
+    st.success("""⚔️ **Tab 6: Battle Engine** ⭐ NEW! - The ultimate 5-stage stress test. Generate a proposal, 
+    face AI adversary attack, get auto-refined defense, see friction score (0-100), and discover what clients 
+    would hear from ChatGPT/Claude/Gemini. Takes 3-5 minutes. Perfect for pre-meeting preparation!""")
+    
     st.markdown("## ⚔️ Battle Engine: Digital Twin Stress Test")
     st.caption("The most rigorous stress-test. 1. Generate Hybrid Proposal -> 2. Ruthless AI Attack -> 3. Auto-Refined Defense.")
 
