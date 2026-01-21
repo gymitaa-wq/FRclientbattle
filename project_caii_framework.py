@@ -140,23 +140,28 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Use new google.genai API
             client = genai.Client(api_key=api_key)
             
-            # Define fallback hierarchy (only use confirmed working models)
+            # Define fallback hierarchy with Gemini 3.0 as latest
             model_hierarchy = [
-                'gemini-2.0-flash-exp',  # Latest, fast, confirmed working
+                'gemini-3.0-flash',  # Latest public model (Dec 2025)
+                'gemini-3.0-pro',    # More capable 3.0 model
+                'gemini-2.0-flash-exp',  # Fallback to 2.0
             ]
             
             # Determine starting model based on input
-            start_model = 'gemini-2.0-flash-exp'
-            if "gemini 3" in model.lower() or "2.5" in model.lower():
+            start_model = 'gemini-3.0-flash'  # Default to latest
+            if "3.0" in model.lower() or "gemini 3" in model.lower():
+                if "pro" in model.lower():
+                    start_model = 'gemini-3.0-pro'
+                else:
+                    start_model = 'gemini-3.0-flash'
+            elif "2.0" in model.lower() or "2.5" in model.lower():
                 start_model = 'gemini-2.0-flash-exp'
-            elif "8b" in model.lower():
-                start_model = 'gemini-2.0-flash-exp'  # 8b model not available, use 2.0
             elif "1.5 flash" in model.lower():
-                 # 1.5-flash is having API issues, upgrade to 2.0
-                start_model = 'gemini-2.0-flash-exp'
+                 # Upgrade 1.5-flash to 3.0-flash
+                start_model = 'gemini-3.0-flash'
             elif "1.5 pro" in model.lower():
-                 # 1.5-pro is having API issues, upgrade to 2.0
-                start_model = 'gemini-2.0-flash-exp'
+                 # Upgrade 1.5-pro to 3.0-pro
+                start_model = 'gemini-3.0-pro'
             elif model.lower() != "gemini":
                  # If user asked for something specific that's not generic 'gemini', try that first
                 if model in model_hierarchy:

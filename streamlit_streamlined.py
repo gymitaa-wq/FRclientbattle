@@ -132,9 +132,9 @@ with st.sidebar:
     st.markdown("### 🤖 AI Model")
     model_option = st.selectbox(
         "Select Model",
-        ["Gemini 3 (Latest Public Default)", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash", "claude", "gpt"],
+        ["Gemini 3.0 Flash (Latest)", "gemini-3.0-pro", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash", "claude", "gpt"],
         index=0,
-        help="AI model for simulation. 'Gemini 3' uses the latest experimental model (2.0 Flash) to match public AI."
+        help="AI model for simulation. 'Gemini 3.0 Flash' is the latest public model released December 2025."
     )
     
     # Refinement settings
@@ -309,9 +309,9 @@ with tab1:
             # Model Selection
             model_option = st.selectbox(
                 "Select AI Model for Simulation", 
-                ["gemini-2.0-flash-exp", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-1.5-flash"],
+                ["gemini-3.0-flash", "gemini-3.0-pro", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
                 index=0,
-                help="Gemini 2.0 Flash Exp is recommended for best performance."
+                help="Gemini 3.0 Flash is the latest public model from Google (December 2025)."
             )
             
             # Simulation controls
@@ -843,9 +843,9 @@ with tab6:
         
         model_name = st.selectbox(
             "Select Adversary Model",
-            ["gemini-2.0-flash-exp"],
+            ["gemini-3.0-flash", "gemini-3.0-pro"],
             key="battle_model",
-            help="Using the latest Gemini model for maximum stress testing."
+            help="Using Gemini 3.0 models for maximum stress testing with latest AI capabilities."
         )
 
         if st.button("🔥 BEGIN STRESS TEST", type="primary", use_container_width=True):
