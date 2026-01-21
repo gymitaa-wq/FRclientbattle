@@ -140,28 +140,40 @@ def callModel(prompt: str, model: str = "gemini", max_tokens: int = 4000) -> str
             # Use new google.genai API
             client = genai.Client(api_key=api_key)
             
-            # Define fallback hierarchy with Gemini 3.0 as latest
+            # Define fallback hierarchy with Gemini 3 as latest (using correct API identifiers)
             model_hierarchy = [
-                'gemini-3.0-flash',  # Latest public model (Dec 2025)
-                'gemini-3.0-pro',    # More capable 3.0 model
+                'gemini-3-flash-preview',  # Latest public model (Dec 2025)
+                'gemini-3-pro-preview',    # More capable 3.0 model
                 'gemini-2.0-flash-exp',  # Fallback to 2.0
             ]
             
+            # Map user-friendly names to API identifiers
+            model_name_mapping = {
+                'Gemini 3 Flash (Latest)': 'gemini-3-flash-preview',
+                'Gemini 3.0 Flash (Latest)': 'gemini-3-flash-preview',
+                'gemini-3.0-flash': 'gemini-3-flash-preview',
+                'gemini-3.0-pro': 'gemini-3-pro-preview',
+            }
+            
+            # Apply mapping if needed
+            if model in model_name_mapping:
+                model = model_name_mapping[model]
+            
             # Determine starting model based on input
-            start_model = 'gemini-3.0-flash'  # Default to latest
-            if "3.0" in model.lower() or "gemini 3" in model.lower():
+            start_model = 'gemini-3-flash-preview'  # Default to latest
+            if "3" in model.lower() and ("flash" in model.lower() or "gemini 3" in model.lower()):
                 if "pro" in model.lower():
-                    start_model = 'gemini-3.0-pro'
+                    start_model = 'gemini-3-pro-preview'
                 else:
-                    start_model = 'gemini-3.0-flash'
+                    start_model = 'gemini-3-flash-preview'
             elif "2.0" in model.lower() or "2.5" in model.lower():
                 start_model = 'gemini-2.0-flash-exp'
             elif "1.5 flash" in model.lower():
                  # Upgrade 1.5-flash to 3.0-flash
-                start_model = 'gemini-3.0-flash'
+                start_model = 'gemini-3-flash-preview'
             elif "1.5 pro" in model.lower():
                  # Upgrade 1.5-pro to 3.0-pro
-                start_model = 'gemini-3.0-pro'
+                start_model = 'gemini-3-pro-preview'
             elif model.lower() != "gemini":
                  # If user asked for something specific that's not generic 'gemini', try that first
                 if model in model_hierarchy:
