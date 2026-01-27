@@ -384,59 +384,47 @@ OUTPUT ONLY THE JSON OBJECT:"""
     parsed_profile = None
     parse_errors = []
     
-    # Attempt 1: Direct parse
+    # Attempt 1: Direct parse after cleaning
     try:
         parsed_profile = json.loads(cleaned)
     except json.JSONDecodeError as e:
         parse_errors.append(f"Attempt 1: {e}")
     
-    # Attempt 2: More aggressive cleaning
+    # Attempt 2: More aggressive quote replacement
     if parsed_profile is None:
         try:
-            # Replace any remaining single quotes
             more_cleaned = cleaned.replace("'", '"')
             parsed_profile = json.loads(more_cleaned)
         except json.JSONDecodeError as e:
             parse_errors.append(f"Attempt 2: {e}")
     
-    # Attempt 3: Extract key values manually and merge with base profile
+    # Attempt 3: Ask LLM to fix its own malformed JSON
     if parsed_profile is None:
         try:
-            # Use base profile and try to extract key fields from text
-            parsed_profile = base_profile.copy()
+            fix_prompt = f"""The following JSON is malformed. Fix it and return ONLY valid JSON.
+
+MALFORMED JSON:
+{cleaned[:2000]}
+
+RULES:
+1. Use double quotes for all property names and string values
+2. Use true/false (lowercase) for booleans  
+3. Remove trailing commas
+4. Ensure all brackets are properly closed
+5. Return ONLY the fixed JSON, nothing else
+
+FIXED JSON:"""
             
-            # Extract age
-            age_match = re.search(r'["\']?age["\']?\s*[:=]\s*(\d+)', cleaned, re.IGNORECASE)
-            if age_match:
-                parsed_profile['age'] = int(age_match.group(1))
-            
-            # Extract income
-            income_match = re.search(r'annual_income["\']?\s*[:=]\s*["\']?\$?([\d,]+)', cleaned, re.IGNORECASE)
-            if income_match:
-                parsed_profile['annual_income'] = int(income_match.group(1).replace(',', ''))
-            
-            # Extract gender
-            gender_match = re.search(r'["\']?gender["\']?\s*[:=]\s*["\']?(\w+)', cleaned, re.IGNORECASE)
-            if gender_match:
-                parsed_profile['gender'] = gender_match.group(1).capitalize()
-            
-            # Extract marital status
-            marital_match = re.search(r'marital_status["\']?\s*[:=]\s*["\']?(\w+)', cleaned, re.IGNORECASE)
-            if marital_match:
-                parsed_profile['marital_status'] = marital_match.group(1).capitalize()
-            
-            # Extract occupation
-            occupation_match = re.search(r'["\']?occupation["\']?\s*[:=]\s*["\']?([^"\']+)["\']?', cleaned, re.IGNORECASE)
-            if occupation_match:
-                parsed_profile['occupation'] = occupation_match.group(1).strip()
-                
+            fixed_response = call_model_func(fix_prompt, model="gemini", max_tokens=2500)
+            fixed_cleaned = _clean_json_response(fixed_response)
+            parsed_profile = json.loads(fixed_cleaned)
         except Exception as e:
-            parse_errors.append(f"Attempt 3 (regex fallback): {e}")
+            parse_errors.append(f"Attempt 3 (LLM fix): {e}")
     
     # If all parsing failed, raise detailed error
     if parsed_profile is None:
         error_details = "\n".join(parse_errors)
-        raise ValueError(f"Failed to parse LLM response as JSON after multiple attempts:\n{error_details}\n\nRaw response snippet: {cleaned[:500]}")
+        raise ValueError(f"Failed to parse profile after multiple attempts:\n{error_details}")
     
     # Ensure critical metadata is present/overwritten
     parsed_profile['generated_at'] = datetime.now().isoformat()
