@@ -345,39 +345,31 @@ TARGET JSON STRUCTURE (All fields required):
 Verify that your JSON is valid and matches the types (integers for money, strings for text).
 """
     
-    try:
-        # Call LLM
-        response = call_model_func(prompt, model="gemini", max_tokens=2000)
-        
-        # Clean response (remove markdown code blocks if present)
-        clean_response = re.sub(r'```json\s*|\s*```', '', response).strip()
-        
-        # Parse JSON
-        parsed_profile = json.loads(clean_response)
-        
-        # Ensure critical metadata is present/overwritten
-        parsed_profile['generated_at'] = datetime.now().isoformat()
-        parsed_profile['profile_id'] = f"IMPORTED_{random.randint(1000, 9999)}"
-        
-        # Basic validation/repair of numeric fields if LLM returned strings
-        for key, val in parsed_profile.items():
-            if key in ['annual_income', 'total_assets', 'total_debt', 'net_worth', 'age', 'num_children']:
-                if isinstance(val, str):
-                    # Remove currency symbols and commas
-                    clean_val = re.sub(r'[$,]', '', val)
-                    try:
-                        parsed_profile[key] = int(float(clean_val))
-                    except:
-                        pass # Keep as is if fails, but usually this catches common LLM formatting
-        
-        return parsed_profile
-        
-    except Exception as e:
-        print(f"Error parsing profile from text: {e}")
-        # Fallback: Return a random profile but try to inject at least a warning or flag
-        fallback = generate_structured_client_profile()
-        fallback['primary_concern'] = f"FAILED TO PARSE: {str(e)[:50]}" 
-        return fallback
+    # Call LLM
+    response = call_model_func(prompt, model="gemini", max_tokens=2000)
+    
+    # Clean response (remove markdown code blocks if present)
+    clean_response = re.sub(r'```json\s*|\s*```', '', response).strip()
+    
+    # Parse JSON
+    parsed_profile = json.loads(clean_response)
+    
+    # Ensure critical metadata is present/overwritten
+    parsed_profile['generated_at'] = datetime.now().isoformat()
+    parsed_profile['profile_id'] = f"IMPORTED_{random.randint(1000, 9999)}"
+    
+    # Basic validation/repair of numeric fields if LLM returned strings
+    for key, val in parsed_profile.items():
+        if key in ['annual_income', 'total_assets', 'total_debt', 'net_worth', 'age', 'num_children']:
+            if isinstance(val, str):
+                # Remove currency symbols and commas
+                clean_val = re.sub(r'[$,]', '', val)
+                try:
+                    parsed_profile[key] = int(float(clean_val))
+                except:
+                    pass # Keep as is if fails, but usually this catches common LLM formatting
+    
+    return parsed_profile
 
 
 def format_profile_for_display(profile: Dict[str, Any]) -> str:
