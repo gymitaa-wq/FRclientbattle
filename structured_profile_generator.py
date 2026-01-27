@@ -303,6 +303,38 @@ def generate_structured_client_profile(overrides: Dict[str, Any] = None) -> Dict
     return profile
 
 
+def _clean_json_response(response: str) -> str:
+    """
+    Clean and fix common JSON issues from LLM responses.
+    """
+    # Remove markdown code blocks
+    cleaned = re.sub(r'```json\s*|\s*```', '', response).strip()
+    cleaned = re.sub(r'```\s*', '', cleaned).strip()
+    
+    # Try to extract JSON object if there's extra text
+    json_match = re.search(r'\{[\s\S]*\}', cleaned)
+    if json_match:
+        cleaned = json_match.group(0)
+    
+    # Fix single quotes to double quotes (common LLM mistake)
+    # Be careful not to break apostrophes in text
+    cleaned = re.sub(r"(?<![a-zA-Z])'([^']*)'(?![a-zA-Z])", r'"\1"', cleaned)
+    
+    # Fix property names with single quotes
+    cleaned = re.sub(r"'(\w+)':", r'"\1":', cleaned)
+    
+    # Remove trailing commas before } or ]
+    cleaned = re.sub(r',\s*}', '}', cleaned)
+    cleaned = re.sub(r',\s*]', ']', cleaned)
+    
+    # Fix True/False to true/false (Python vs JSON)
+    cleaned = re.sub(r'\bTrue\b', 'true', cleaned)
+    cleaned = re.sub(r'\bFalse\b', 'false', cleaned)
+    cleaned = re.sub(r'\bNone\b', 'null', cleaned)
+    
+    return cleaned
+
+
 def parse_profile_from_text(text: str, call_model_func: Callable) -> Dict[str, Any]:
     """
     Parses unstructured or semi-structured text input into a standardized client profile
@@ -317,57 +349,114 @@ def parse_profile_from_text(text: str, call_model_func: Callable) -> Dict[str, A
     """
     
     # 1. First, generate a base random profile to serve as smart defaults
-    # This ensures we always have valid data for every field even if the text is sparse
     base_profile = generate_structured_client_profile()
     
     # Convert base profile to JSON structure guide
     structure_guide = json.dumps(base_profile, indent=2, default=str)
     
-    prompt = f"""
-tYou are an expert data parser. Your goal is to extract a client profile from the USER INPUT below and map it to a specific JSON structure.
+    prompt = f"""You are an expert data parser. Extract a client profile from the USER INPUT and output ONLY valid JSON.
 
 USER INPUT:
 \"\"\"
 {text}
 \"\"\"
 
-INSTRUCTIONS:
-1. Extract every fact available in the USER INPUT (Age, Income, Debt, Health, etc.).
-2. For any field NOT mentioned in the input, you MUST infer a reasonable value or use a realistic default based on the other facts (e.g., if Age is 30, Student Loans might be higher; if Occupation is Doctor, Income should be high).
-3. Do NOT leave any fields null or empty. Every field in the TARGET JSON STRUCTURE must be filled.
-4. If the input describes "Spouse Income" or "Total Household", ensure the math adds up (`annual_income` + `spouse_income` = `total_household_income`).
-5. Ensure `net_worth` = `total_assets` - `total_debt`.
-6. Return ONLY the valid JSON object. No markdown formatting, no explanations.
+CRITICAL RULES:
+1. Extract every fact from INPUT (Age, Income, Debt, Health, etc.)
+2. For missing fields, infer reasonable values based on available data
+3. Output ONLY the JSON object - no markdown, no explanations, no code blocks
+4. Use double quotes for all strings and property names
+5. Use true/false (lowercase) for booleans
+6. Ensure all numbers are integers (no quotes around numbers)
 
-TARGET JSON STRUCTURE (All fields required):
+REQUIRED JSON STRUCTURE:
 {structure_guide}
 
-Verify that your JSON is valid and matches the types (integers for money, strings for text).
-"""
+OUTPUT ONLY THE JSON OBJECT:"""
     
     # Call LLM
-    response = call_model_func(prompt, model="gemini", max_tokens=2000)
+    response = call_model_func(prompt, model="gemini", max_tokens=2500)
     
-    # Clean response (remove markdown code blocks if present)
-    clean_response = re.sub(r'```json\s*|\s*```', '', response).strip()
+    # Clean the response
+    cleaned = _clean_json_response(response)
     
-    # Parse JSON
-    parsed_profile = json.loads(clean_response)
+    # Try to parse JSON with multiple attempts
+    parsed_profile = None
+    parse_errors = []
+    
+    # Attempt 1: Direct parse
+    try:
+        parsed_profile = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        parse_errors.append(f"Attempt 1: {e}")
+    
+    # Attempt 2: More aggressive cleaning
+    if parsed_profile is None:
+        try:
+            # Replace any remaining single quotes
+            more_cleaned = cleaned.replace("'", '"')
+            parsed_profile = json.loads(more_cleaned)
+        except json.JSONDecodeError as e:
+            parse_errors.append(f"Attempt 2: {e}")
+    
+    # Attempt 3: Extract key values manually and merge with base profile
+    if parsed_profile is None:
+        try:
+            # Use base profile and try to extract key fields from text
+            parsed_profile = base_profile.copy()
+            
+            # Extract age
+            age_match = re.search(r'["\']?age["\']?\s*[:=]\s*(\d+)', cleaned, re.IGNORECASE)
+            if age_match:
+                parsed_profile['age'] = int(age_match.group(1))
+            
+            # Extract income
+            income_match = re.search(r'annual_income["\']?\s*[:=]\s*["\']?\$?([\d,]+)', cleaned, re.IGNORECASE)
+            if income_match:
+                parsed_profile['annual_income'] = int(income_match.group(1).replace(',', ''))
+            
+            # Extract gender
+            gender_match = re.search(r'["\']?gender["\']?\s*[:=]\s*["\']?(\w+)', cleaned, re.IGNORECASE)
+            if gender_match:
+                parsed_profile['gender'] = gender_match.group(1).capitalize()
+            
+            # Extract marital status
+            marital_match = re.search(r'marital_status["\']?\s*[:=]\s*["\']?(\w+)', cleaned, re.IGNORECASE)
+            if marital_match:
+                parsed_profile['marital_status'] = marital_match.group(1).capitalize()
+            
+            # Extract occupation
+            occupation_match = re.search(r'["\']?occupation["\']?\s*[:=]\s*["\']?([^"\']+)["\']?', cleaned, re.IGNORECASE)
+            if occupation_match:
+                parsed_profile['occupation'] = occupation_match.group(1).strip()
+                
+        except Exception as e:
+            parse_errors.append(f"Attempt 3 (regex fallback): {e}")
+    
+    # If all parsing failed, raise detailed error
+    if parsed_profile is None:
+        error_details = "\n".join(parse_errors)
+        raise ValueError(f"Failed to parse LLM response as JSON after multiple attempts:\n{error_details}\n\nRaw response snippet: {cleaned[:500]}")
     
     # Ensure critical metadata is present/overwritten
     parsed_profile['generated_at'] = datetime.now().isoformat()
     parsed_profile['profile_id'] = f"IMPORTED_{random.randint(1000, 9999)}"
     
     # Basic validation/repair of numeric fields if LLM returned strings
-    for key, val in parsed_profile.items():
-        if key in ['annual_income', 'total_assets', 'total_debt', 'net_worth', 'age', 'num_children']:
+    numeric_fields = ['annual_income', 'total_assets', 'total_debt', 'net_worth', 'age', 
+                      'num_children', 'spouse_income', 'total_household_income', 'savings_401k',
+                      'emergency_fund', 'other_investments', 'mortgage_balance', 'student_loans',
+                      'car_loans', 'credit_card_debt', 'employer_life_insurance', 'personal_life_coverage']
+    
+    for key in numeric_fields:
+        if key in parsed_profile:
+            val = parsed_profile[key]
             if isinstance(val, str):
-                # Remove currency symbols and commas
                 clean_val = re.sub(r'[$,]', '', val)
                 try:
                     parsed_profile[key] = int(float(clean_val))
                 except:
-                    pass # Keep as is if fails, but usually this catches common LLM formatting
+                    pass
     
     return parsed_profile
 
