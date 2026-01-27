@@ -426,6 +426,12 @@ FIXED JSON:"""
         error_details = "\n".join(parse_errors)
         raise ValueError(f"Failed to parse profile after multiple attempts:\n{error_details}")
     
+    # CRITICAL: Merge with base profile to fill any missing fields with random defaults
+    # This ensures the profile is always complete, even if LLM didn't return all fields
+    complete_profile = base_profile.copy()  # Start with random defaults
+    complete_profile.update(parsed_profile)  # Override with LLM-extracted values
+    parsed_profile = complete_profile
+    
     # Ensure critical metadata is present/overwritten
     parsed_profile['generated_at'] = datetime.now().isoformat()
     parsed_profile['profile_id'] = f"IMPORTED_{random.randint(1000, 9999)}"
