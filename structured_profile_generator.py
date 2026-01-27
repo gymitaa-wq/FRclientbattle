@@ -406,12 +406,15 @@ OUTPUT ONLY THE JSON OBJECT:"""
 MALFORMED JSON:
 {cleaned[:2000]}
 
-RULES:
-1. Use double quotes for all property names and string values
-2. Use true/false (lowercase) for booleans  
-3. Remove trailing commas
-4. Ensure all brackets are properly closed
-5. Return ONLY the fixed JSON, nothing else
+CRITICAL FIXES NEEDED:
+1. Escape all quotes inside string values using backslash: "value with \\"quote\\""
+2. Remove ALL newlines from inside string values - put everything on one line
+3. Use double quotes for all property names and string values
+4. Use true/false (lowercase) for booleans  
+5. Remove trailing commas
+6. Ensure all brackets are properly closed
+
+Return ONLY the fixed JSON object. No explanations.
 
 FIXED JSON:"""
             
@@ -421,10 +424,23 @@ FIXED JSON:"""
         except Exception as e:
             parse_errors.append(f"Attempt 3 (LLM fix): {e}")
     
-    # If all parsing failed, raise detailed error
+    # Attempt 4: Try Python's literal_eval (more forgiving)
     if parsed_profile is None:
-        error_details = "\n".join(parse_errors)
-        raise ValueError(f"Failed to parse profile after multiple attempts:\n{error_details}")
+        try:
+            import ast
+            # Convert to Python dict syntax first
+            python_cleaned = cleaned.replace('true', 'True').replace('false', 'False').replace('null', 'None')
+            parsed_profile = ast.literal_eval(python_cleaned)
+        except Exception as e:
+            parse_errors.append(f"Attempt 4 (ast.literal_eval): {e}")
+    
+    # Attempt 5: Last resort - use base profile and warn user
+    if parsed_profile is None:
+        # Return base profile with a warning in primary_concern
+        parsed_profile = base_profile.copy()
+        parsed_profile['primary_concern'] = "⚠️ Import partially failed - using random profile. Try simpler input text."
+        print(f"WARNING: All JSON parsing failed. Using base random profile. Errors: {parse_errors}")
+    
     
     # CRITICAL: Merge with base profile to fill any missing fields with random defaults
     # This ensures the profile is always complete, even if LLM didn't return all fields
