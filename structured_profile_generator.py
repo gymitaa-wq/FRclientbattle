@@ -4,7 +4,9 @@ More realistic and reasonable financial profiles
 """
 
 import random
-from typing import Dict, Any
+import json
+import re
+from typing import Dict, Any, Callable
 from datetime import datetime
 
 
@@ -301,6 +303,83 @@ def generate_structured_client_profile(overrides: Dict[str, Any] = None) -> Dict
     return profile
 
 
+def parse_profile_from_text(text: str, call_model_func: Callable) -> Dict[str, Any]:
+    """
+    Parses unstructured or semi-structured text input into a standardized client profile
+    using an LLM. Filling in missing gaps with reasonable defaults.
+    
+    Args:
+        text: The raw text input containing client details.
+        call_model_func: Function to call the LLM (e.g. callModel from framework).
+        
+    Returns:
+        A structured profile dictionary compatible with the simulation.
+    """
+    
+    # 1. First, generate a base random profile to serve as smart defaults
+    # This ensures we always have valid data for every field even if the text is sparse
+    base_profile = generate_structured_client_profile()
+    
+    # Convert base profile to JSON structure guide
+    structure_guide = json.dumps(base_profile, indent=2, default=str)
+    
+    prompt = f"""
+tYou are an expert data parser. Your goal is to extract a client profile from the USER INPUT below and map it to a specific JSON structure.
+
+USER INPUT:
+\"\"\"
+{text}
+\"\"\"
+
+INSTRUCTIONS:
+1. Extract every fact available in the USER INPUT (Age, Income, Debt, Health, etc.).
+2. For any field NOT mentioned in the input, you MUST infer a reasonable value or use a realistic default based on the other facts (e.g., if Age is 30, Student Loans might be higher; if Occupation is Doctor, Income should be high).
+3. Do NOT leave any fields null or empty. Every field in the TARGET JSON STRUCTURE must be filled.
+4. If the input describes "Spouse Income" or "Total Household", ensure the math adds up (`annual_income` + `spouse_income` = `total_household_income`).
+5. Ensure `net_worth` = `total_assets` - `total_debt`.
+6. Return ONLY the valid JSON object. No markdown formatting, no explanations.
+
+TARGET JSON STRUCTURE (All fields required):
+{structure_guide}
+
+Verify that your JSON is valid and matches the types (integers for money, strings for text).
+"""
+    
+    try:
+        # Call LLM
+        response = call_model_func(prompt, model="gemini", max_tokens=2000)
+        
+        # Clean response (remove markdown code blocks if present)
+        clean_response = re.sub(r'```json\s*|\s*```', '', response).strip()
+        
+        # Parse JSON
+        parsed_profile = json.loads(clean_response)
+        
+        # Ensure critical metadata is present/overwritten
+        parsed_profile['generated_at'] = datetime.now().isoformat()
+        parsed_profile['profile_id'] = f"IMPORTED_{random.randint(1000, 9999)}"
+        
+        # Basic validation/repair of numeric fields if LLM returned strings
+        for key, val in parsed_profile.items():
+            if key in ['annual_income', 'total_assets', 'total_debt', 'net_worth', 'age', 'num_children']:
+                if isinstance(val, str):
+                    # Remove currency symbols and commas
+                    clean_val = re.sub(r'[$,]', '', val)
+                    try:
+                        parsed_profile[key] = int(float(clean_val))
+                    except:
+                        pass # Keep as is if fails, but usually this catches common LLM formatting
+        
+        return parsed_profile
+        
+    except Exception as e:
+        print(f"Error parsing profile from text: {e}")
+        # Fallback: Return a random profile but try to inject at least a warning or flag
+        fallback = generate_structured_client_profile()
+        fallback['primary_concern'] = f"FAILED TO PARSE: {str(e)[:50]}" 
+        return fallback
+
+
 def format_profile_for_display(profile: Dict[str, Any]) -> str:
     """
     Formats profile dictionary into readable text for display.
@@ -328,7 +407,7 @@ Children:           {profile['num_children']}
 ─────────────────────────────────────────────────────────────
 Occupation:         {profile['occupation']}
 Annual Income:      ${profile['annual_income']:,}
-Spouse Income:      ${profile['spouse_income']:,}
+Spouse Income:      ${profile.get('spouse_income', 0):,}
 Total Household:    ${profile['total_household_income']:,}
 Years Employed:     {profile['employment_years']} years
 

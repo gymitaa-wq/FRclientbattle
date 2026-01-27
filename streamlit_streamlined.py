@@ -24,7 +24,8 @@ except Exception as e:
 
 # Import streamlined simulation components
 try:
-    from structured_profile_generator import generate_structured_client_profile, format_profile_for_display
+    from structured_profile_generator import generate_structured_client_profile, format_profile_for_display, parse_profile_from_text
+    from project_caii_framework import callModel
     from run_streamlined_simulation import run_streamlined_simulation
     from database import save_simulation, load_history_df as load_simulation_history, get_stats as get_history_stats
     from login_ui import require_login, show_user_header, get_current_username
@@ -428,6 +429,35 @@ with tab1:
     
     st.markdown("## 🎲 Client Profile Generation")
     
+    # --- Import Profile from Text ---
+    with st.expander("📥 Import Profile from Text", expanded=False):
+        st.info("Paste any client description (emails, notes, chat logs) below to auto-generate a structured profile.")
+        
+        profile_text_input = st.text_area(
+            "Client Description", 
+            height=150, 
+            placeholder="e.g. John is a 35 year old dentist making $180k..."
+        )
+        
+        if st.button("✨ Generate from Text", type="primary"):
+            if profile_text_input.strip():
+                with st.spinner("🤖 Parsing profile details..."):
+                    try:
+                        # Use the framework's callModel to parse text
+                        st.session_state['client_profile_dict'] = parse_profile_from_text(
+                            profile_text_input, 
+                            callModel
+                        )
+                        st.session_state['client_profile_text'] = format_profile_for_display(
+                            st.session_state['client_profile_dict']
+                        )
+                        st.success(f"✅ Successfully imported profile for {st.session_state['client_profile_dict'].get('profile_id')}!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to parse profile: {e}")
+            else:
+                st.warning("Please enter some text first.")
+
     # --- Profile Customization Controls (Refactored) ---
     overrides = render_profile_customization_ui(key_prefix="tab1")
     
