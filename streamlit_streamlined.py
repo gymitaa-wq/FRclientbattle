@@ -623,14 +623,28 @@ with tab1:
             
             with col2:
                 st.markdown("**💼 Final Products:**")
-                products = result['final_products']
+                products = result.get('final_products', {})
+                
                 if products.get('products'):
                     for product in products['products']:
-                        st.markdown(f"• **{product['name']}**: ${product['monthly_premium']}/month")
+                        premium = product.get('monthly_premium', product.get('premium_value', 0))
+                        st.markdown(f"• **{product['name']}**: ${premium}/month")
                     
-                    st.markdown(f"**Total**: ${products['total_monthly']:,}/month (${products['total_annual']:,}/year)")
+                    total_monthly = products.get('total_monthly', 0)
+                    total_annual = products.get('total_annual', total_monthly * 12)
+                    st.markdown(f"**Total**: ${total_monthly:,}/month (${total_annual:,}/year)")
+                elif products.get('extraction_error'):
+                    st.warning(f"⚠️ Product extraction failed: {products['extraction_error']}")
+                    with st.expander("View Full Proposal"):
+                        st.text(products.get('proposal_text', ''))
                 else:
-                    st.info("See Details tab for full product information")
+                    st.info("💡 Product details in final proposal below")
+                    # Show final proposal as fallback
+                    if result['iterations']:
+                        final_proposal = result['iterations'][-1]['proposal']
+                        with st.expander("📄 View Final Proposal", expanded=False):
+                            st.markdown(final_proposal)
+
         
         else:
             st.markdown("### ❌ Deal Not Closed")
@@ -697,15 +711,27 @@ with tab2:
             st.markdown("---")
             st.markdown("### 💼 Final Products")
             
-            products = result['final_products']
+            products = result.get('final_products', {})
             if products.get('products'):
                 for product in products['products']:
-                    st.markdown(f"**{product['name']}**: ${product['monthly_premium']}/month")
+                    premium = product.get('monthly_premium', product.get('premium_value', 0))
+                    st.markdown(f"**{product['name']}**: ${premium}/month")
                 
-                st.markdown(f"**Total Monthly**: ${products['total_monthly']:,}")
-                st.markdown(f"**Total Annual**: ${products['total_annual']:,}")
+                total_monthly = products.get('total_monthly', 0)
+                total_annual = products.get('total_annual', total_monthly * 12)
+                st.markdown(f"**Total Monthly**: ${total_monthly:,}")
+                st.markdown(f"**Total Annual**: ${total_annual:,}")
+            elif products.get('extraction_error'):
+                st.warning(f"⚠️ Product extraction failed: {products['extraction_error']}")
+                st.info("💡 View the final proposal in the Details tab for product information")
             else:
-                st.info("See proposal text for product details")
+                st.info("💡 Product details available in final proposal (see Details tab)")
+                # Show final proposal as fallback
+                if result.get('iterations'):
+                    final_proposal = result['iterations'][-1]['proposal']
+                    with st.expander("📄 View Final Proposal", expanded=False):
+                        st.markdown(final_proposal)
+
         
         else:
             st.markdown("### ❌ Deal Not Closed")
