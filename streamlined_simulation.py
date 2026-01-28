@@ -493,79 +493,135 @@ def extract_final_products(proposal_text: str, accepted: bool, callModel: callab
         return {'products': [], 'total_monthly': 0, 'total_annual': 0}
     
     # Use LLM to extract products - much more reliable than regex!
-    extraction_prompt = f"""
-You are a data extraction assistant. Extract the recommended insurance products from this proposal.
+    extraction_prompt = f"""Extract the recommended insurance products from this proposal and return ONLY a JSON object.
 
 PROPOSAL TEXT:
-{proposal_text}
+{proposal_text[:3000]}
 
-Extract ONLY the products that are actually RECOMMENDED (not "Not Recommended").
+Extract products that are RECOMMENDED (skip any marked "Not Recommended").
 
-Return a JSON object with this exact structure:
+Return ONLY this JSON structure (no other text, no explanations):
+```json
 {{
     "products": [
-        {{"name": "Term Life Insurance", "monthly_premium": 58}},
+        {{"name": "Term Life Insurance", "monthly_premium": 150}},
         {{"name": "Disability Insurance", "monthly_premium": 95}}
     ],
-    "total_monthly": 153
+    "total_monthly": 245
 }}
+```
 
 Rules:
-1. Only include products that are RECOMMENDED (skip any marked "Not Recommended")
-2. Extract the monthly PREMIUM (not benefit amount)
-3. Use product names: "Term Life Insurance", "Whole Life Insurance", "Disability Insurance"
-4. Return valid JSON only, no other text
-5. If a product section says "Not Recommended" or similar, DO NOT include it
-
-JSON:"""
+- Extract monthly PREMIUM (not coverage amount)
+- Use simple names: "Term Life Insurance", "Whole Life Insurance", "Disability Insurance", etc.
+- Return ONLY the JSON object inside the code block
+- If no products found, return {{"products": [], "total_monthly": 0}}
+"""
 
     try:
         if callModel:
-            response = callModel(extraction_prompt, model="gemini", max_tokens=500)
+            response = callModel(extraction_prompt, model="gemini", max_tokens=800)
         else:
-            # Fallback if no callModel provided
             from project_caii_framework import callModel as default_callModel
-            response = default_callModel(extraction_prompt, model="gemini", max_tokens=500)
+            response = default_callModel(extraction_prompt, model="gemini", max_tokens=800)
         
-        # Parse JSON response
         import json
         import re
         
-        # Extract JSON from response (in case LLM adds extra text)
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(0)
-            data = json.loads(json_str)
-            
-            products = data.get('products', [])
-            total_monthly = data.get('total_monthly', 0)
-            
-            # Validate and clean up
-            cleaned_products = []
-            for p in products:
-                if 'name' in p and 'monthly_premium' in p:
-                    cleaned_products.append({
-                        'name': p['name'],
-                        'monthly_premium': str(p['monthly_premium']),
-                        'premium_value': int(p['monthly_premium'])
-                    })
-            
-            # Recalculate total if needed
-            if total_monthly == 0 or abs(total_monthly - sum(p['premium_value'] for p in cleaned_products)) > 50:
-                total_monthly = sum(p['premium_value'] for p in cleaned_products)
-            
-            return {
-                'products': cleaned_products,
-                'total_monthly': int(total_monthly),
-                'total_annual': int(total_monthly * 12),
-                'proposal_text': proposal_text
-            }
+        # Method 1: Try to extract JSON from markdown code block
+        json_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
+        if json_block_match:
+            json_str = json_block_match.group(1)
         else:
-            raise ValueError("No JSON found in LLM response")
+            # Method 2: Try to find any JSON object
+            json_match = re.search(r'\{[^{}]*"products"[^{}]*\[[^\]]*\][^{}]*\}', response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+            else:
+                # Method 3: Very greedy - find first { to last }
+                start = response.find('{')
+                end = response.rfind('}')
+                if start >= 0 and end > start:
+                    json_str = response[start:end+1]
+                else:
+                    raise ValueError("No JSON object found in response")
+        
+        # Parse JSON
+        data = json.loads(json_str)
+        
+        products = data.get('products', [])
+        total_monthly = data.get('total_monthly', 0)
+        
+        # Validate and clean up
+        cleaned_products = []
+        for p in products:
+            if 'name' in p and 'monthly_premium' in p:
+                premium = p['monthly_premium']
+                # Handle string premiums like "$150"
+                if isinstance(premium, str):
+                    premium = int(re.sub(r'[^\d]', '', premium))
+                cleaned_products.append({
+                    'name': p['name'],
+                    'monthly_premium': str(premium),
+                    'premium_value': int(premium)
+                })
+        
+        # Recalculate total if needed
+        if cleaned_products:
+            calculated_total = sum(p['premium_value'] for p in cleaned_products)
+            if total_monthly == 0 or abs(total_monthly - calculated_total) > 50:
+                total_monthly = calculated_total
+        
+        return {
+            'products': cleaned_products,
+            'total_monthly': int(total_monthly),
+            'total_annual': int(total_monthly * 12),
+            'proposal_text': proposal_text
+        }
     
     except Exception as e:
-        print(f"Warning: LLM extraction failed ({e}), falling back to simple parsing")
-        # Fallback: return empty if extraction fails
+        print(f"Warning: LLM extraction failed ({e}), trying regex fallback")
+        
+        # FALLBACK: Try regex extraction directly from proposal
+        try:
+            import re
+            products = []
+            
+            # Look for common patterns like "Term Life: $150/month" or "Life Insurance: $150"
+            patterns = [
+                r'(?:Term|Whole)\s+Life[^$]*\$\s*([\d,]+)',
+                r'Disability[^$]*\$\s*([\d,]+)',
+                r'Long[- ]Term Care[^$]*\$\s*([\d,]+)',
+            ]
+            
+            names = ['Term Life Insurance', 'Disability Insurance', 'Long-Term Care Insurance']
+            
+            for pattern, name in zip(patterns, names):
+                match = re.search(pattern, proposal_text, re.IGNORECASE)
+                if match:
+                    amount = int(match.group(1).replace(',', ''))
+                    # Filter reasonable premiums (likely monthly if < 2000)
+                    if amount < 2000:
+                        products.append({
+                            'name': name,
+                            'monthly_premium': str(amount),
+                            'premium_value': amount
+                        })
+            
+            if products:
+                total = sum(p['premium_value'] for p in products)
+                return {
+                    'products': products,
+                    'total_monthly': total,
+                    'total_annual': total * 12,
+                    'proposal_text': proposal_text,
+                    'extraction_method': 'regex_fallback'
+                }
+        
+        except Exception as fallback_error:
+            print(f"Regex fallback also failed: {fallback_error}")
+        
+        # Final fallback: return empty
         return {
             'products': [],
             'total_monthly': 0,
@@ -573,4 +629,5 @@ JSON:"""
             'proposal_text': proposal_text,
             'extraction_error': str(e)
         }
+
 
