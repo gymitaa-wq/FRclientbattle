@@ -125,14 +125,51 @@ def save_simulation(result: Dict[str, Any], username: str = "anonymous") -> int:
         profile = result.get('profile', {})
         final_products = result.get('final_products', {})
         outcome_analysis = result.get('outcome_analysis', {})
+        deal_closed = result.get('deal_closed', False)
         
         # Extract product names
-        p_names = [p['name'] for p in final_products.get('products', [])]
-        p_names_str = "; ".join(p_names)
+        products_list = final_products.get('products', [])
+        if products_list:
+            p_names = [p.get('name', 'Unknown Product') for p in products_list]
+            p_names_str = "; ".join(p_names)
+        else:
+            p_names_str = "No products" if not deal_closed else ""
         
-        # Extract reasons
-        rejection_str = "; ".join(outcome_analysis.get('rejection_reasons', []))
-        winning_str = "; ".join(outcome_analysis.get('winning_factors', []))
+        # Extract total monthly premium
+        total_monthly = final_products.get('total_monthly', 0)
+        if total_monthly == 0 and products_list:
+            # Try to calculate from products if missing
+            try:
+                total_monthly = sum(p.get('premium_value', 0) for p in products_list)
+            except:
+                pass
+        
+        # Extract reasons based on deal outcome
+        if deal_closed:
+            # Deal accepted - get winning factors
+            winning_factors = outcome_analysis.get('winning_factors', [])
+            closure_reasons = outcome_analysis.get('closure_reasons', [])
+            
+            # Combine both for comprehensive view
+            all_reasons = winning_factors + closure_reasons
+            winning_str = "; ".join(all_reasons) if all_reasons else "Deal accepted"
+            rejection_str = ""  # Empty for accepted deals
+        else:
+            # Deal rejected - get rejection reasons
+            rejection_reasons = outcome_analysis.get('rejection_reasons', [])
+            remaining_concerns = outcome_analysis.get('remaining_concerns', [])
+            
+            # Combine both for comprehensive view
+            all_rejections = rejection_reasons + remaining_concerns[:2]  # Limit concerns to 2
+            rejection_str = "; ".join(all_rejections) if all_rejections else "Deal rejected"
+            winning_str = ""  # Empty for rejected deals
+        
+        # Debug logging
+        print(f"DEBUG: Saving simulation - Deal closed: {deal_closed}")
+        print(f"DEBUG: Product names: {p_names_str}")
+        print(f"DEBUG: Total monthly: {total_monthly}")
+        print(f"DEBUG: Rejection reasons: {rejection_str}")
+        print(f"DEBUG: Winning factors: {winning_str}")
         
         # Create record
         db_record = SimulationResult(
@@ -149,20 +186,20 @@ def save_simulation(result: Dict[str, Any], username: str = "anonymous") -> int:
             marital_status=profile.get('marital_status', 'unknown'),
             
             # Outcome fields
-            deal_closed=result.get('deal_closed', False),
+            deal_closed=deal_closed,
             final_friction_score=result.get('final_friction_score', 0.0),
             total_iterations=result.get('total_iterations', 0),
             rejection_reasons=rejection_str,
             winning_factors=winning_str,
             
             # Product fields
-            total_monthly_premium=final_products.get('total_monthly', 0.0),
+            total_monthly_premium=float(total_monthly),
             product_names=p_names_str,
             
             # Full JSON blobs
             profile_data=profile,
             iterations_data=result.get('iterations', []),
-            outcome_analysis_data=result.get('outcome_analysis', {}),
+            outcome_analysis_data=outcome_analysis,
             final_products_data=final_products
         )
         
@@ -172,6 +209,8 @@ def save_simulation(result: Dict[str, Any], username: str = "anonymous") -> int:
         return db_record.id
     except Exception as e:
         print(f"Error saving to DB: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         raise e
     finally:
