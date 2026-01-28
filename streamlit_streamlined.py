@@ -43,6 +43,37 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Helper function to clean markdown text
+def clean_markdown_text(text):
+    """
+    Clean text for proper markdown display.
+    Fixes:
+    - Dollar signs being interpreted as LaTeX math
+    - Italicized text running together without spaces
+    - Other markdown rendering issues
+    """
+    if not text:
+        return text
+    
+    import re
+    
+    # Escape dollar signs that aren't part of intentional LaTeX
+    # Replace standalone $ with \$
+    text = re.sub(r'\$(?![a-zA-Z])', r'\\$', text)
+    
+    # Fix italicized text without spaces: *word1* *word2* -> *word1* *word2*
+    # This pattern finds end-italic immediately followed by start-italic
+    text = re.sub(r'\*\s*\*', '* *', text)
+    
+    # Fix bold text without spaces
+    text = re.sub(r'\*\*\s*\*\*', '** **', text)
+    
+    # Remove excessive asterisks (***+)
+    text = re.sub(r'\*{3,}', '**', text)
+    
+    return text
+
+
 # Custom CSS
 st.markdown("""
 <style>
@@ -870,15 +901,18 @@ with tab4:
                                 
                                 with col_a:
                                     st.markdown("#### 🧑‍💼 Advisor Proposal")
-                                    st.info(iter_data.get('proposal', 'No proposal data'))
+                                    proposal_text = iter_data.get('proposal', 'No proposal data')
+                                    st.info(clean_markdown_text(proposal_text))
                                 
                                 with col_b:
                                     st.markdown("#### 🤖 AI Critique")
-                                    st.warning(iter_data.get('ai_critique', 'No critique data'))
+                                    critique_text = iter_data.get('ai_critique', 'No critique data')
+                                    st.warning(clean_markdown_text(critique_text))
                                 
                                 st.markdown("#### 🧑 Client Decision")
                                 decision_color = "green" if iter_data.get('accepted') else "red"
-                                st.markdown(f":{decision_color}[{iter_data.get('decision_text', 'No decision data')}]")
+                                decision_text = iter_data.get('decision_text', 'No decision data')
+                                st.markdown(f":{decision_color}[{clean_markdown_text(decision_text)}]")
                     else:
                         st.warning("No detailed iteration data available for this simulation (legacy record).")
                 
