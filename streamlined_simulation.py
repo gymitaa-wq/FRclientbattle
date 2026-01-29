@@ -499,17 +499,50 @@ def extract_final_products(proposal_text: str, accepted: bool, callModel: callab
     # Strategy: Look for final recommendations section, or use last 3000 chars
     import re
     
-    # Try to find "REVISED RECOMMENDATIONS" or "FINAL RECOMMENDATIONS" section
-    revised_match = re.search(r'(?:REVISED|FINAL)\s+RECOMMENDATIONS(.*)', proposal_text, re.IGNORECASE | re.DOTALL)
+    # Step 1: Remove problematic sections that mention removed products
+    # Remove WHAT'S CHANGED section (contains mentions of removed products)
+    text_cleaned = re.sub(
+        r'##?\s*WHAT[\s\']*S CHANGED.*?(?=##|\Z)',  # From "WHAT'S CHANGED" to next ## or end
+        '',
+        proposal_text,
+        flags=re.IGNORECASE | re.DOTALL
+    )
+    
+    # Remove ACKNOWLEDGMENT section (may reference old recommendations)
+    text_cleaned = re.sub(
+        r'##?\s*ACKNOWLEDGMENT.*?(?=##|\Z)',
+        '',
+        text_cleaned,
+        flags=re.IGNORECASE | re.DOTALL
+    )
+    
+    # Remove WHY THESE CHANGES section (may reference what was removed)
+    text_cleaned = re.sub(
+        r'##?\s*WHY THESE CHANGES.*?(?=##|\Z)',
+        '',
+        text_cleaned,
+        flags=re.IGNORECASE | re.DOTALL
+    )
+    
+    print(f"DEBUG: Cleaned text length: {len(text_cleaned)} chars (original: {len(proposal_text)})")
+    
+    # Step 2: Try to find "REVISED RECOMMENDATIONS" or "FINAL RECOMMENDATIONS" or "RECOMMENDATIONS" section
+    revised_match = re.search(r'(?:REVISED|FINAL)?\s*RECOMMENDATIONS(.*)', text_cleaned, re.IGNORECASE | re.DOTALL)
     if revised_match:
         # Extract from this section to end
         extract_text = revised_match.group(0)[:3500]  # From section header onwards
-        print(f"DEBUG: Found REVISED RECOMMENDATIONS section, extracting from there")
+        print(f"DEBUG: Found RECOMMENDATIONS section, extracting from there")
     else:
-        # Fallback: Use LAST 3000 chars (final recommendations are at end)
-        # This avoids the "WHAT'S CHANGED" section at thebeginning
-        extract_text = proposal_text[-3000:] if len(proposal_text) > 3000 else proposal_text
-        print(f"DEBUG: No REVISED section found, using last 3000 chars")
+        # Fallback: Use LAST 3000 chars of cleaned text (final recommendations are at end)
+        # This avoids the "WHAT'S CHANGED" section which is now removed
+        extract_text = text_cleaned[-3000:] if len(text_cleaned) > 3000 else text_cleaned
+        print(f"DEBUG: No RECOMMENDATIONS section found, using last 3000 chars of cleaned text")
+    
+    # DEBUG: Print the extract_text to see what's being sent to LLM
+    print(f"\nDEBUG: Text being sent to LLM for extraction ({len(extract_text)} chars):")
+    print("="*70)
+    print(extract_text)
+    print("="*70)
     
     # Simplified, ultra-clear extraction prompt
     extraction_prompt = f"""You are extracting insurance product information. Be extremely concise.
