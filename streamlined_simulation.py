@@ -492,13 +492,32 @@ def extract_final_products(proposal_text: str, accepted: bool, callModel: callab
     if not accepted:
         return {'products': [], 'total_monthly': 0, 'total_annual': 0}
     
+    # CRITICAL FIX: For revised proposals, the actual recommendations are at the END
+    # The beginning often has "WHAT'S CHANGED" which mentions REMOVED products
+    # We need to extract from the final/revised sections, not the acknowledgment/changes summary
+    
+    # Strategy: Look for final recommendations section, or use last 3000 chars
+    import re
+    
+    # Try to find "REVISED RECOMMENDATIONS" or "FINAL RECOMMENDATIONS" section
+    revised_match = re.search(r'(?:REVISED|FINAL)\s+RECOMMENDATIONS(.*)', proposal_text, re.IGNORECASE | re.DOTALL)
+    if revised_match:
+        # Extract from this section to end
+        extract_text = revised_match.group(0)[:3500]  # From section header onwards
+        print(f"DEBUG: Found REVISED RECOMMENDATIONS section, extracting from there")
+    else:
+        # Fallback: Use LAST 3000 chars (final recommendations are at end)
+        # This avoids the "WHAT'S CHANGED" section at thebeginning
+        extract_text = proposal_text[-3000:] if len(proposal_text) > 3000 else proposal_text
+        print(f"DEBUG: No REVISED section found, using last 3000 chars")
+    
     # Simplified, ultra-clear extraction prompt
     extraction_prompt = f"""You are extracting insurance product information. Be extremely concise.
 
-PROPOSAL (first 2500 chars):
-{proposal_text[:2500]}
+PROPOSAL TEXT (FINAL RECOMMENDATIONS SECTION):
+{extract_text}
 
-Task: Extract recommended products and their monthly premiums.
+Task: Extract products that are CURRENTLY RECOMMENDED (not what was removed/changed).
 
 Output ONLY valid JSON in this exact format:
 {{
@@ -510,13 +529,16 @@ Output ONLY valid JSON in this exact format:
 }}
 
 Rules:
-1. Extract ONLY recommended products (skip "Not Recommended")
-2. Monthly premium only (not annual, not benefit amount)
-3. Simple product names: "Term Life Insurance", "Whole Life Insurance", "Disability Insurance"
-4. Return ONLY the JSON object - no explanations, no markdown, no other text
-5. If no products, return {{"products": [], "total_monthly": 0}}
+1. Extract ONLY currently recommended products
+2. IGNORE any products mentioned as "removed", "changed", or "not recommended"
+3. Look for the FINAL/CURRENT product list, not historical changes
+4. Monthly premium only (not annual, not benefit amount)
+5. Simple product names: "Term Life Insurance", "Whole Life Insurance", "Disability Insurance", "Roth IRA"
+6. Return ONLY the JSON object - no explanations, no markdown, no other text
+7. If no products, return {{"products": [], "total_monthly": 0}}
 
 JSON:"""
+
 
     try:
         if callModel:
