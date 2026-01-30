@@ -136,6 +136,17 @@ def run_streamlined_simulation(
         callModel=callModel
     )
     
+    # DEBUG: Log what was extracted
+    print(f"\n{'='*70}")
+    print(f"PRODUCT EXTRACTION COMPLETE")
+    print(f"{'='*70}")
+    print(f"Deal Accepted: {final_iteration['accepted']}")
+    print(f"Products Extracted: {len(final_products.get('products', []))}")
+    for p in final_products.get('products', []):
+        print(f"  - {p.get('name', 'Unknown')}: ${p.get('monthly_premium', 0)}/month")
+    print(f"Total Monthly: ${final_products.get('total_monthly', 0)}")
+    print(f"{'='*70}\n")
+    
     # Build complete results
     results = {
         'profile': profile,

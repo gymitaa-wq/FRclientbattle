@@ -524,25 +524,25 @@ def extract_final_products(proposal_text: str, accepted: bool, callModel: callab
         flags=re.IGNORECASE | re.DOTALL
     )
     
-    print(f"DEBUG: Cleaned text length: {len(text_cleaned)} chars (original: {len(proposal_text)})")
+    # print(f"DEBUG: Cleaned text length: {len(text_cleaned)} chars (original: {len(proposal_text)})")
     
     # Step 2: Try to find "REVISED RECOMMENDATIONS" or "FINAL RECOMMENDATIONS" or "RECOMMENDATIONS" section
     revised_match = re.search(r'(?:REVISED|FINAL)?\s*RECOMMENDATIONS(.*)', text_cleaned, re.IGNORECASE | re.DOTALL)
     if revised_match:
         # Extract from this section to end
         extract_text = revised_match.group(0)[:3500]  # From section header onwards
-        print(f"DEBUG: Found RECOMMENDATIONS section, extracting from there")
+        # print(f"DEBUG: Found RECOMMENDATIONS section, extracting from there")
     else:
         # Fallback: Use LAST 3000 chars of cleaned text (final recommendations are at end)
         # This avoids the "WHAT'S CHANGED" section which is now removed
         extract_text = text_cleaned[-3000:] if len(text_cleaned) > 3000 else text_cleaned
-        print(f"DEBUG: No RECOMMENDATIONS section found, using last 3000 chars of cleaned text")
+        # print(f"DEBUG: No RECOMMENDATIONS section found, using last 3000 chars of cleaned text")
     
     # DEBUG: Print the extract_text to see what's being sent to LLM
-    print(f"\nDEBUG: Text being sent to LLM for extraction ({len(extract_text)} chars):")
-    print("="*70)
-    print(extract_text)
-    print("="*70)
+    # print(f"\nDEBUG: Text being sent to LLM for extraction ({len(extract_text)} chars):")
+    # print("="*70)
+    # print(extract_text)
+    # print("="*70)
     
     # Simplified, ultra-clear extraction prompt
     extraction_prompt = f"""You are extracting insurance product information. Be extremely concise.
@@ -581,10 +581,10 @@ JSON:"""
             response = default_callModel(extraction_prompt, model="gemini", max_tokens=800)
         
         # DEBUG: Print actual response to help troubleshoot
-        print(f"DEBUG: LLM response for product extraction:")
-        print(f"Response length: {len(response)} chars")
-        print(f"First 500 chars: {response[:500]}")
-        print("="*70)
+        # print(f"DEBUG: LLM response for product extraction:")
+        # print(f"Response length: {len(response)} chars")
+        # print(f"First 500 chars: {response[:500]}")
+        # print("="*70)
         
         import json
         import re
@@ -600,38 +600,38 @@ JSON:"""
             match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', cleaned, re.DOTALL)
             if match:
                 json_str = match.group(1)
-                print("DEBUG: Extracted from markdown code block")
+                # print("DEBUG: Extracted from markdown code block")
         
         # Method 2: Find JSON object pattern
         if not json_str:
             match = re.search(r'\{[^{}]*"products"[^{}]*\[.*?\][^{}]*\}', cleaned, re.DOTALL)
             if match:
                 json_str = match.group(0)
-                print("DEBUG: Extracted via products pattern match")
+                # print("DEBUG: Extracted via products pattern match")
         
         # Method 3: Find any JSON object
         if not json_str:
             match = re.search(r'\{.*?\}', cleaned, re.DOTALL)
             if match:
                 json_str = match.group(0)
-                print("DEBUG: Extracted via generic JSON match")
+                # print("DEBUG: Extracted via generic JSON match")
         
         # Method 4: Assume entire response is JSON
         if not json_str and cleaned.startswith('{') and cleaned.endswith('}'):
             json_str = cleaned
-            print("DEBUG: Using entire response as JSON")
+            # print("DEBUG: Using entire response as JSON")
         
         if not json_str:
             raise ValueError(f"No JSON object found in response. First 200 chars: {response[:200]}")
         
         # Parse JSON
-        print(f"DEBUG: Attempting to parse JSON: {json_str[:200]}...")
+        # print(f"DEBUG: Attempting to parse JSON: {json_str[:200]}...")
         data = json.loads(json_str)
         
         products = data.get('products', [])
         total_monthly = data.get('total_monthly', 0)
         
-        print(f"DEBUG: Successfully parsed {len(products)} products")
+        # print(f"DEBUG: Successfully parsed {len(products)} products")
         
         # Validate and clean up
         cleaned_products = []
