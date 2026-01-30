@@ -182,8 +182,21 @@ if st.button("🚀 Run Backfill", type="primary", disabled=st.session_state['bac
                     })
                     continue
                 
-                # Compare old vs new
-                old_product_names = sorted([p.get('name', '') for p in old_products])
+                # Compare old vs new (handle different data formats for old_products)
+                try:
+                    # If old_products is a list of dicts
+                    if old_products and isinstance(old_products[0], dict):
+                        old_product_names = sorted([p.get('name', '') for p in old_products])
+                    # If old_products is a list of strings (legacy format)
+                    elif old_products and isinstance(old_products[0], str):
+                        old_product_names = sorted(old_products)
+                    # Empty or unknown format
+                    else:
+                        old_product_names = []
+                except (IndexError, TypeError, AttributeError) as e:
+                    # Fallback for any parsing issues
+                    old_product_names = []
+                
                 new_product_names = sorted([p.get('name', '') for p in new_products])
                 
                 if old_product_names != new_product_names:
