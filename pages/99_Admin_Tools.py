@@ -157,8 +157,17 @@ if st.button("🚀 Run Backfill", type="primary", disabled=st.session_state['bac
                     })
                     continue
                 
-                # Get old products
-                old_products = sim.final_products_data or []
+                # Get old products (handle both JSON string and already-parsed list)
+                old_products_raw = sim.final_products_data
+                if isinstance(old_products_raw, str):
+                    try:
+                        old_products = json.loads(old_products_raw) if old_products_raw else []
+                    except:
+                        old_products = []
+                elif old_products_raw is None:
+                    old_products = []
+                else:
+                    old_products = old_products_raw
                 
                 # Re-extract with fixed logic
                 try:
