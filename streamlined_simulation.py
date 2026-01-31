@@ -654,7 +654,9 @@ JSON:"""
             if total_monthly == 0 or abs(total_monthly - calculated_total) > 50:
                 total_monthly = calculated_total
         
-        print(f"DEBUG: Final result: {len(cleaned_products)} products, ${total_monthly}/month")
+        print(f"✓ EXTRACTION RESULT: {len(cleaned_products)} products, ${total_monthly}/month")
+        for p in cleaned_products:
+            print(f"   - {p['name']}: ${p['premium_value']}/month")
         
         return {
             'products': cleaned_products,
