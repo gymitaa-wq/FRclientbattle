@@ -575,10 +575,10 @@ JSON:"""
 
     try:
         if callModel:
-            response = callModel(extraction_prompt, model="gemini", max_tokens=800)
+            response = callModel(extraction_prompt, model="gemini", max_tokens=1500)  # Increased from 800
         else:
             from project_caii_framework import callModel as default_callModel
-            response = default_callModel(extraction_prompt, model="gemini", max_tokens=800)
+            response = default_callModel(extraction_prompt, model="gemini", max_tokens=1500)  # Increased from 800
         
         # DEBUG: Print actual response to help troubleshoot
         # print(f"DEBUG: LLM response for product extraction:")
@@ -675,34 +675,44 @@ JSON:"""
         traceback.print_exc()
     
     # FALLBACK: Parse the proposal text directly for product information
-    print("DEBUG: Attempting plain-text fallback extraction...")
+    # IMPORTANT: Use text_cleaned (with WHAT'S CHANGED removed) NOT original proposal_text!
+    print("WARNING: JSON extraction failed, using text fallback on cleaned proposal")
     try:
         import re
         products = []
         
+        # Use the CLEANED text that has WHAT'S CHANGED section removed
+        # This prevents extracting mentions of REMOVED products
+        search_text = text_cleaned  # NOT proposal_text!
+        
         # Look for product mentions with dollar amounts
-        # Pattern 1: "Product Name: $XXX/month" or "Product Name - $XXX monthly"
+        # Pattern: "Product Name: $XXX/month" or "Product Name - $XXX monthly"
         product_patterns = {
             'Term Life Insurance': [
-                r'Term\s+Life[^$\n]*\$\s*([\d,]+)',
-                r'(?:^|\n)\s*Term[^$\n]*\$\s*([\d,]+)'
+                r'Term\s+(?:Life|20|30)[^$\n]*\$\s*([\d,]+)',
+                r'(?:^|\n)\s*\*?\*?Term[^$\n]*\$\s*([\d,]+)'
             ],
             'Whole Life Insurance': [
                 r'Whole\s+Life[^$\n]*\$\s*([\d,]+)',
-                r'(?:^|\n)\s*Whole[^$\n]*\$\s*([\d,]+)'
+                r'(?:^|\n)\s*\*?\*?Whole[^$\n]*\$\s*([\d,]+)'
             ],
             'Disability Insurance': [
                 r'Disability[^$\n]*\$\s*([\d,]+)',
-                r'(?:^|\n)\s*Disability[^$\n]*\$\s*([\d,]+)'
+                r'(?:^|\n)\s*\*?\*?Disability[^$\n]*\$\s*([\d,]+)'
             ],
             'Long-Term Care': [
                 r'Long[- ]Term\s+Care[^$\n]*\$\s*([\d,]+)',
+                r'(?:^|\n)\s*\*?\*?(?:LTC|Long[- ]Term)[^$\n]*\$\s*([\d,]+)'
+            ],
+            'Roth IRA': [
+                r'Roth\s+IRA[^$\n]*\$\s*([\d,]+)',
+                r'(?:^|\n)\s*\*?\*?Roth[^$\n]*\$\s*([\d,]+)'
             ]
         }
         
         for product_name, patterns in product_patterns.items():
             for pattern in patterns:
-                match = re.search(pattern, proposal_text, re.IGNORECASE)
+                match = re.search(pattern, search_text, re.IGNORECASE)
                 if match:
                     amount_str = match.group(1).replace(',', '')
                     amount = int(amount_str)
