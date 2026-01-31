@@ -575,10 +575,10 @@ JSON:"""
 
     try:
         if callModel:
-            response = callModel(extraction_prompt, model="gemini", max_tokens=1500)  # Increased from 800
+            response = callModel(extraction_prompt, model="gemini", max_tokens=20000)
         else:
             from project_caii_framework import callModel as default_callModel
-            response = default_callModel(extraction_prompt, model="gemini", max_tokens=1500)  # Increased from 800
+            response = default_callModel(extraction_prompt, model="gemini", max_tokens=20000)
         
         # DEBUG: Print actual response to help troubleshoot
         # print(f"DEBUG: LLM response for product extraction:")

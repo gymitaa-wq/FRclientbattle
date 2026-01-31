@@ -17,4 +17,4 @@ services:
       name: frclientbattle-disk
       mountPath: /data
       sizeGB: 1
-    autoDeploy: false
+    autoDeploy: true  # Changed from false - now auto-deploys on push
