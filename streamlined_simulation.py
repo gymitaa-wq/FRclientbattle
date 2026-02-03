@@ -524,25 +524,15 @@ def extract_final_products(proposal_text: str, accepted: bool, callModel: callab
         flags=re.IGNORECASE | re.DOTALL
     )
     
-    # print(f"DEBUG: Cleaned text length: {len(text_cleaned)} chars (original: {len(proposal_text)})")
-    
     # Step 2: Try to find "REVISED RECOMMENDATIONS" or "FINAL RECOMMENDATIONS" or "RECOMMENDATIONS" section
     revised_match = re.search(r'(?:REVISED|FINAL)?\s*RECOMMENDATIONS(.*)', text_cleaned, re.IGNORECASE | re.DOTALL)
     if revised_match:
         # Extract from this section to end
         extract_text = revised_match.group(0)[:3500]  # From section header onwards
-        # print(f"DEBUG: Found RECOMMENDATIONS section, extracting from there")
     else:
         # Fallback: Use LAST 3000 chars of cleaned text (final recommendations are at end)
         # This avoids the "WHAT'S CHANGED" section which is now removed
         extract_text = text_cleaned[-3000:] if len(text_cleaned) > 3000 else text_cleaned
-        # print(f"DEBUG: No RECOMMENDATIONS section found, using last 3000 chars of cleaned text")
-    
-    # DEBUG: Print the extract_text to see what's being sent to LLM
-    # print(f"\nDEBUG: Text being sent to LLM for extraction ({len(extract_text)} chars):")
-    # print("="*70)
-    # print(extract_text)
-    # print("="*70)
     
     # Simplified, ultra-clear extraction prompt
     extraction_prompt = f"""You are extracting insurance product information. Be extremely concise.
